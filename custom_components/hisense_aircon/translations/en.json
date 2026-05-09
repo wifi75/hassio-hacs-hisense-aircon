@@ -1,0 +1,73 @@
+{
+  "title": "Hisense Air Conditioner",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Hisense Air Conditioner",
+        "data": {
+          "setup_method": "Setup method"
+        }
+      },
+      "cloud": {
+        "title": "Discover from Hisense app",
+        "data": {
+          "app": "App code",
+          "username": "Username",
+          "password": "Password",
+          "device_name": "Device name filter",
+          "local_ip": "Home Assistant local IP address",
+          "callback_port": "Home Assistant HTTP port",
+          "status_interval": "Status refresh interval"
+        },
+        "data_description": {
+          "device_name": "Leave empty to add every compatible device in the account.",
+          "local_ip": "Use only when Home Assistant has multiple network interfaces or VLANs. Leave empty for automatic detection.",
+          "callback_port": "The plain HTTP port that the air conditioner can reach, usually 8123.",
+          "status_interval": "How often Home Assistant queues a full property refresh, in seconds."
+        }
+      },
+      "manual": {
+        "title": "Manual LAN key setup",
+        "data": {
+          "name": "Device name",
+          "app": "App code",
+          "host": "Device IP address",
+          "mac_address": "MAC address",
+          "lanip_key": "LAN IP key",
+          "lanip_key_id": "LAN IP key ID",
+          "model": "OEM model",
+          "sw_version": "Software version",
+          "temp_type": "Temperature unit",
+          "local_ip": "Home Assistant local IP address",
+          "callback_port": "Home Assistant HTTP port",
+          "status_interval": "Status refresh interval"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the Hisense/Ayla service or the credentials were rejected.",
+      "device_not_found": "No matching device was found.",
+      "invalid_manual_config": "Manual configuration is incomplete or invalid."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hisense Air Conditioner options",
+        "data": {
+          "local_ip": "Home Assistant local IP address",
+          "callback_port": "Home Assistant HTTP port",
+          "status_interval": "Status refresh interval"
+        },
+        "data_description": {
+          "local_ip": "Use only when Home Assistant has multiple network interfaces or VLANs. Leave empty for automatic detection.",
+          "callback_port": "The plain HTTP port that the air conditioner can reach, usually 8123.",
+          "status_interval": "How often Home Assistant queues a full property refresh, in seconds."
+        }
+      }
+    }
+  }
+}

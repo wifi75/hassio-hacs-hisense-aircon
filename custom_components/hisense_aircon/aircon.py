@@ -260,7 +260,7 @@ class AcDevice(Device):
 
   # @override to add special support for t_power.
   def queue_command(self, name: str, value) -> None:
-    # HomeAssistant doesn't have a designated turn on button in climate.mqtt.
+    # Home Assistant climate commands do not always include a separate power command.
     # Furthermore, turn_on doesn't send the right command...
     if name == 't_work_mode':
       if value == 'OFF':

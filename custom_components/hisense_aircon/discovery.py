@@ -5,9 +5,9 @@ from http import HTTPStatus
 import json
 import logging
 import ssl
-import sys
 
 from .app_mappings import *
+from .error import Error
 
 _USER_AGENT = 'Dalvik/2.1.0 (Linux; U; Android 9.0; SM-G850F Build/LRX22G)'
 
@@ -40,14 +40,14 @@ async def _sign_in(user: str, passwd: str, user_server: str, app_id: str, app_se
                              headers=headers,
                              ssl=ssl_context) as resp:
     if resp.status != HTTPStatus.OK.value:
-      logging.error('Failed to login to Hisense server:\nStatus %d: %r', resp.status, resp.reason)
-      sys.exit(1)
+      raise Error('Failed to login to Hisense server: '
+                  f'Status {resp.status}: {resp.reason!r}')
     resp_data = await resp.text()
     try:
       tokens = json.loads(resp_data)
     except UnicodeDecodeError:
       logging.exception('Failed to parse login tokens to Hisense server:\nData: %r', resp_data)
-      sys.exit(1)
+      raise Error('Failed to parse login tokens from Hisense server.')
     return tokens['access_token']
 
 
@@ -58,18 +58,16 @@ async def _get_devices(devices_server: str, access_token: str, headers: dict,
                          headers=headers,
                          ssl=ssl_context) as resp:
     if resp.status != HTTPStatus.OK.value:
-      logging.error('Failed to get devices data from Hisense server:\nStatus %d: %r', resp.status,
-                    resp.reason)
-      sys.exit(1)
+      raise Error('Failed to get devices data from Hisense server: '
+                  f'Status {resp.status}: {resp.reason!r}')
     resp_data = await resp.text()
     try:
       devices = json.loads(resp_data)
     except UnicodeDecodeError:
       logging.exception('Failed to parse devices data from Hisense server:\nData: %r', resp_data)
-      sys.exit(1)
+      raise Error('Failed to parse devices data from Hisense server.')
     if not devices:
-      logging.error('No device is configured! Please configure a device first.')
-      sys.exit(1)
+      raise Error('No device is configured in the selected Hisense app account.')
     return devices
 
 
@@ -80,8 +78,7 @@ async def _get_lanip(devices_server: str, dsn: str, headers: dict, session: aioh
                          headers=headers,
                          ssl=ssl_context) as resp:
     if resp.status != HTTPStatus.OK.value:
-      logging.error('Failed to get device data from Hisense server: %r', resp)
-      sys.exit(1)
+      raise Error(f'Failed to get LAN data from Hisense server: {resp.status} {resp.reason!r}')
     resp_data = await resp.text()
     return json.loads(resp_data)['lanip']
 
@@ -93,8 +90,8 @@ async def _get_device_properties(devices_server: str, dsn: str, headers: dict,
                          headers=headers,
                          ssl=ssl_context) as resp:
     if resp.status != HTTPStatus.OK.value:
-      logging.error('Failed to get properties data from Hisense server: %r', resp)
-      sys.exit(1)
+      raise Error(
+          f'Failed to get properties data from Hisense server: {resp.status} {resp.reason!r}')
     resp_data = await resp.text()
     return json.loads(resp_data)
 
@@ -126,10 +123,9 @@ async def perform_discovery(session: aiohttp.ClientSession,
   user_server = AYLA_USER_SERVERS[region]
   devices_server = AYLA_DEVICES_SERVERS[region]
 
-  ssl_context = ssl.SSLContext()
-  ssl_context.verify_mode = ssl.CERT_NONE
+  ssl_context = ssl.create_default_context()
   ssl_context.check_hostname = False
-  ssl_context.load_default_certs()
+  ssl_context.verify_mode = ssl.CERT_NONE
 
   access_token = await _sign_in(user, passwd, user_server, app_id, app_secret, session, ssl_context)
 

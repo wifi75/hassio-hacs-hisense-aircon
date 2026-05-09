@@ -36,9 +36,10 @@ class Notifier:
   _KEEP_ALIVE_INTERVAL = 10.0
   _TIME_TO_HANDLE_REQUESTS = 100e-3
 
-  def __init__(self, port: int, local_ip: str):
+  def __init__(self, port: int, local_ip: str, loop=None):
     self._configurations = []
     self._condition = asyncio.Condition()
+    self._loop = loop
 
     self._running = False
 
@@ -72,7 +73,7 @@ class Notifier:
       self._condition.notify_all()
 
   def notify(self):
-    loop = asyncio.get_event_loop()
+    loop = self._loop or asyncio.get_event_loop()
     asyncio.run_coroutine_threadsafe(self._notify(), loop)
 
   async def start(self, session: aiohttp.ClientSession):
