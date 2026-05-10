@@ -19,6 +19,17 @@ class FanSpeed(enum.IntEnum):
   HIGHER = 9
 
 
+class VertiSweep(enum.IntEnum):
+  SWEEP = 0
+  AUTO = 1
+  ANGLE1 = 2
+  ANGLE2 = 3
+  ANGLE3 = 4
+  ANGLE4 = 5
+  ANGLE5 = 6
+  ANGLE6 = 7
+
+
 class SleepMode(enum.IntEnum):
   STOP = 0
   ONE = 1
@@ -68,6 +79,11 @@ class DoubleFrequency(enum.Enum):
 
 
 class Economy(enum.Enum):
+  OFF = 0
+  ON = 1
+
+
+class Powerful(enum.Enum):
   OFF = 0
   ON = 1
 
@@ -125,16 +141,33 @@ class FglOperationMode(enum.IntEnum):
   AUTO = 2
   COOL = 3
   DRY = 4
+  FAN_ONLY = 5
   FAN = 5
   HEAT = 6
 
 
 class FglFanSpeed(enum.IntEnum):
+  DIFFUSE = 0
   QUIET = 0
   LOW = 1
   MEDIUM = 2
   HIGH = 3
   AUTO = 4
+
+
+class OutdoorLowNoise(enum.Enum):
+  OFF = 0
+  ON = 1
+
+
+class Getprop(enum.Enum):
+  OFF = 0
+  ON = 1
+
+
+class Refresh(enum.Enum):
+  OFF = 0
+  ON = 1
 
 
 class Properties(object):
@@ -148,8 +181,19 @@ class Properties(object):
     return cls.__dataclass_fields__[attr].type
 
   @classmethod
+  def parse_attr(cls, attr: str, value):
+    parser = cls._get_metadata(attr).get('parser')
+    if parser:
+      return parser(value)
+    return cls.get_type(attr)(value)
+
+  @classmethod
   def get_base_type(cls, attr: str):
     return cls._get_metadata(attr)['base_type']
+
+  @classmethod
+  def get_scale(cls, attr: str):
+    return cls._get_metadata(attr).get('scale', 1)
 
   @classmethod
   def get_precision(cls, attr: str):
@@ -253,6 +297,15 @@ class AcProperties(Properties):
                                         'decoder': lambda x: FanSpeed[x]
                                     }
                                 })  # FanSpeed
+  t_swing_angle: VertiSweep = field(default=VertiSweep.AUTO,
+                                    metadata={
+                                        'base_type': 'integer',
+                                        'read_only': False,
+                                        'dataclasses_json': {
+                                            'encoder': lambda x: x.name,
+                                            'decoder': lambda x: VertiSweep[x]
+                                        }
+                                    })  # Vertical sweep angle
   t_ftkt_start: int = field(default=None, metadata={'base_type': 'integer', 'read_only': False})
   t_power: Power = field(default=Power.ON,
                          metadata={
@@ -403,15 +456,22 @@ class FglProperties(Properties):
   adjust_temperature: int = field(default=25,
                                   metadata={
                                       'base_type': 'integer',
-                                      'precision': 0.1,
+                                      'scale': 0.1,
+                                      'precision': 0.5,
                                       'read_only': False
                                   })
-  display_temperature: int = field(default=25,
-                                   metadata={
+  display_temperature: float = field(default=25,
+                                     metadata={
                                       'base_type': 'integer',
-                                      'precision': 0.1,
-                                      'read_only': True
-                                   })
+                                      'read_only': True,
+                                      'parser': lambda x: round((int(x) - 5000) / 50) / 2
+                                     })
+  outdoor_temperature: float = field(default=25,
+                                     metadata={
+                                         'base_type': 'integer',
+                                         'read_only': True,
+                                         'parser': lambda x: round((int(x) - 5000) / 50) / 2
+                                     })
   af_vertical_direction: int = field(default=3,
                                      metadata={
                                          'base_type': 'integer',
@@ -449,6 +509,51 @@ class FglProperties(Properties):
                                         'decoder': lambda x: Economy[x]
                                     }
                                 })
+  powerful_mode: Powerful = field(default=Powerful.OFF,
+                                  metadata={
+                                      'base_type': 'boolean',
+                                      'read_only': False,
+                                      'dataclasses_json': {
+                                          'encoder': lambda x: x.name,
+                                          'decoder': lambda x: Powerful[x]
+                                      }
+                                  })
+  outdoor_low_noise: OutdoorLowNoise = field(default=OutdoorLowNoise.OFF,
+                                             metadata={
+                                                 'base_type': 'boolean',
+                                                 'read_only': False,
+                                                 'dataclasses_json': {
+                                                     'encoder': lambda x: x.name,
+                                                     'decoder': lambda x: OutdoorLowNoise[x]
+                                                 }
+                                             })
+  get_prop: Getprop = field(default=Getprop.OFF,
+                            metadata={
+                                'base_type': 'boolean',
+                                'read_only': False,
+                                'dataclasses_json': {
+                                    'encoder': lambda x: x.name,
+                                    'decoder': lambda x: Getprop[x]
+                                }
+                            })
+  get_prop2: Getprop = field(default=Getprop.OFF,
+                             metadata={
+                                 'base_type': 'boolean',
+                                 'read_only': False,
+                                 'dataclasses_json': {
+                                     'encoder': lambda x: x.name,
+                                     'decoder': lambda x: Getprop[x]
+                                 }
+                             })
+  refresh: Refresh = field(default=Refresh.OFF,
+                           metadata={
+                               'base_type': 'boolean',
+                               'read_only': False,
+                               'dataclasses_json': {
+                                   'encoder': lambda x: x.name,
+                                   'decoder': lambda x: Refresh[x]
+                               }
+                           })
 
 
 @dataclass_json
@@ -475,15 +580,16 @@ class FglBProperties(Properties):
   adjust_temperature: int = field(default=25,
                                   metadata={
                                       'base_type': 'integer',
-                                      'precision': 0.1,
+                                      'scale': 0.1,
+                                      'precision': 0.5,
                                       'read_only': False
                                   })
-  display_temperature: int = field(default=25,
-                                   metadata={
+  display_temperature: float = field(default=25,
+                                     metadata={
                                       'base_type': 'integer',
-                                      'precision': 0.1,
-                                      'read_only': True
-                                   })
+                                      'read_only': True,
+                                      'parser': lambda x: round((int(x) - 5000) / 50) / 2
+                                     })
   af_vertical_move_step1: int = field(default=3,
                                       metadata={
                                           'base_type': 'integer',

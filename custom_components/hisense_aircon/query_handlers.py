@@ -96,8 +96,7 @@ class QueryHandlers:
       # Fix A/C typos.
       if name == 'f_votage':
         name = 'f_voltage'
-      data_type = device.get_property_type(name)
-      value = data_type(update['data']['value'])
+      value = device.parse_property(name, update['data']['value'])
       device.update_property(name, value)
     except Exception as ex:
       logging.error('Failed to handle {}. Exception = {}'.format(update, ex))
@@ -145,13 +144,14 @@ class QueryHandlers:
     encryption = device.get_dev_encryption()
     text = self.unpad(encryption.cipher.decrypt(base64.b64decode(data['enc'])))
     sign = base64.b64encode(Encryption.hmac_digest(encryption.sign_key, text)).decode('utf-8')
+    message = text.decode('utf-8', errors='replace')
     if sign != data['sign']:
-      raise Error(f'Invalid signature for:\n{text.decode("utf-8")}!')
-    logging.info('Decrypted: %s', text.decode('utf-8'))
+      raise Error(f'Invalid signature for:\n{message}!')
+    logging.info('Decrypted: %s', message)
     try:
-      return json.loads(text.decode('utf-8'))
+      return json.loads(message)
     except Exception as ex:
-      raise Error(f'Failed to decode message, {ex!r}:\n{text.decode("utf-8")}')
+      raise Error(f'Failed to decode message, {ex!r}:\n{message}')
 
   @staticmethod
   def pad(data: bytes):

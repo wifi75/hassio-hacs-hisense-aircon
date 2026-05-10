@@ -9,14 +9,13 @@ import threading
 import time
 from typing import Any, Callable, Dict, List
 import queue
-from Crypto.Cipher import AES
 
 from . import control_value
 from .config import Config, Encryption
 from .error import Error
 from .properties import (AcProperties, AirFlow, AirFlowState, Economy, FanSpeed, FastColdHeat,
                          FglProperties, FglBProperties, HumidifierProperties, Properties, Power,
-                         AcWorkMode, Quiet, TemperatureUnit, SleepMode)
+                         AcWorkMode, Quiet, TemperatureUnit, SleepMode, VertiSweep)
 
 
 @dataclass(order=True)
@@ -51,6 +50,7 @@ class Device(object):
     self.topics = {}
     self.work_modes = []
     self.fan_modes = []
+    self.verti_sweeps = []
 
     self._next_command_id = 0
 
@@ -111,12 +111,21 @@ class Device(object):
   def get_property_type(self, name: str):
     return self._properties.get_type(name)
 
+  def parse_property(self, name: str, value):
+    return self._properties.parse_attr(name, value)
+
+  def get_temp_precision(self) -> float:
+    prop_name = self.topics.get('temp')
+    if not prop_name:
+      return 1.0
+    return float(self._properties.get_precision(prop_name))
+
   def update_property(self, name: str, value, notify_value=None) -> None:
     """Update the stored properties, if changed."""
-    # Update value precision for value sent from the A/C
-    precision = self._properties.get_precision(name)
-    if precision != 1:
-      value = round(value * precision)
+    if self._properties.get_type(name) is int:
+      scale = self._properties.get_scale(name)
+      precision = self._properties.get_precision(name)
+      value = round(value * scale / precision) * precision
 
     if notify_value is None:
       notify_value = value
@@ -154,30 +163,28 @@ class Device(object):
       raise Error('Cannot update read-only property "{}".'.format(name))
     data_type = self._properties.get_type(name)
 
-    # Device mode is set using t_control_value
     if issubclass(data_type, enum.Enum):
-      data_value = data_type[value]
-    elif data_type is int and type(value) is str and '.' in value:
-      # Round rather than fail if the input is a float.
-      # This is commonly the case for temperatures converted by HA from Celsius.
-      data_value = round(float(value))
+      data_value = value if isinstance(value, data_type) else data_type[str(value).upper()]
+    elif data_type is int:
+      float_val = float(value)
+      precision = self._properties.get_precision(name)
+      scale = self._properties.get_scale(name)
+      float_val = (round(float_val / precision) * precision) / scale
+      data_value = round(float_val)
     else:
       data_value = data_type(value)
 
     # If device has set t_control_value it is being controlled by this field.
-    if name != 't_control_value' and self.get_property('t_control_value') and name != 't_sleep':
+    if (name not in ('t_control_value', 't_sleep', 't_swing_angle') and
+        self.get_property('t_control_value')):
       self._convert_to_control_value(name, data_value)
       return
 
-    typed_value = data_value
     if issubclass(data_type, enum.Enum):
+      typed_value = data_value
       data_value = data_value.value
-      typed_value = data_type[value]
-
-    # Update value precision for value to be sent to the A/C
-    precision = self._properties.get_precision(name)
-    if precision != 1:
-      data_value = round(data_value / precision)
+    else:
+      typed_value = data_value
 
     command = self._build_command(name, data_value)
     # There are (usually) no acks on commands, so also queue an update to the
@@ -239,6 +246,7 @@ class AcDevice(Device):
     self.topics = {
         'env_temp': 'f_temp_in',
         'fan_speed': 't_fan_speed',
+        'verti_sweep': 't_swing_angle',
         'work_mode': 't_work_mode',
         'power': 't_power',
         'swing_mode': 't_fan_power',
@@ -246,6 +254,8 @@ class AcDevice(Device):
     }
     self.work_modes = ['off', 'fan_only', 'heat', 'cool', 'dry', 'auto']
     self.fan_modes = ['auto', 'lower', 'low', 'medium', 'high', 'higher']
+    self.verti_sweeps = ['sweep', 'auto', 'angle1', 'angle2', 'angle3', 'angle4', 'angle5',
+                         'angle6']
 
   # @override to add special support for t_power.
   def update_property(self, name: str, value) -> None:
@@ -286,7 +296,7 @@ class AcDevice(Device):
   def set_power(self, setting: Power) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_power(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -294,7 +304,7 @@ class AcDevice(Device):
 
   def get_power(self) -> Power:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_power(control)
     else:
       return self.get_property('t_power')
@@ -302,7 +312,7 @@ class AcDevice(Device):
   def set_temperature(self, setting: int) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_temp(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -310,20 +320,21 @@ class AcDevice(Device):
 
   def get_temperature(self) -> int:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_temp(control)
     else:
       return self.get_property('t_temp')
 
   def set_sleep(self, setting: SleepMode) -> None:
-    self.queue_command('t_control_value', setting)
+    self.queue_command('t_sleep', setting)
 
   def get_sleep(self) -> SleepMode:
-    self.get_property('t_sleep')
+    return self.get_property('t_sleep')
 
   def set_work_mode(self, setting: AcWorkMode) -> None:
     control = self.get_property('t_control_value')
-    if (control):
+    control = control_value.clear_up_change_flags(control)
+    if control:
       if control_value.get_power(control) == Power.OFF:
         control = control_value.set_power(control, Power.ON)
       control = control_value.set_work_mode(control, setting)
@@ -333,7 +344,7 @@ class AcDevice(Device):
 
   def get_work_mode(self) -> AcWorkMode:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_work_mode(control)
     else:
       return self.get_property('t_work_mode')
@@ -341,7 +352,7 @@ class AcDevice(Device):
   def set_fan_speed(self, setting: FanSpeed) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_fan_speed(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -349,15 +360,21 @@ class AcDevice(Device):
 
   def get_fan_speed(self) -> FanSpeed:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_fan_speed(control)
     else:
       return self.get_property('t_fan_speed')
 
+  def set_verti_sweep(self, setting: VertiSweep) -> None:
+    self.queue_command('t_swing_angle', setting)
+
+  def get_verti_sweep(self) -> VertiSweep:
+    return self.get_property('t_swing_angle')
+
   def set_fan_vertical(self, setting: AirFlow) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_fan_power(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -365,7 +382,7 @@ class AcDevice(Device):
 
   def get_fan_vertical(self) -> AirFlow:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_fan_power(control)
     else:
       return self.get_property('t_fan_power')
@@ -373,7 +390,7 @@ class AcDevice(Device):
   def set_fan_horizontal(self, setting: AirFlow) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_fan_lr(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -381,7 +398,7 @@ class AcDevice(Device):
 
   def get_fan_horizontal(self) -> AirFlow:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_fan_lr(control)
     else:
       return self.get_property('t_fan_leftright')
@@ -389,7 +406,7 @@ class AcDevice(Device):
   def set_fan_mute(self, setting: Quiet) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_fan_mute(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -397,7 +414,7 @@ class AcDevice(Device):
 
   def get_fan_mute(self) -> Quiet:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_fan_mute(control)
     else:
       return self.get_property('t_fan_mute')
@@ -405,7 +422,7 @@ class AcDevice(Device):
   def set_fast_heat_cold(self, setting: FastColdHeat):
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_heat_cold(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -413,7 +430,7 @@ class AcDevice(Device):
 
   def get_fast_heat_cold(self) -> FastColdHeat:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_heat_cold(control)
     else:
       return self.get_property('t_temp_heatcold')
@@ -421,7 +438,7 @@ class AcDevice(Device):
   def set_eco(self, setting: Economy) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_eco(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -429,7 +446,7 @@ class AcDevice(Device):
 
   def get_eco(self) -> Economy:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_eco(control)
     else:
       return self.get_property('t_eco')
@@ -437,7 +454,7 @@ class AcDevice(Device):
   def set_temptype(self, setting: TemperatureUnit) -> None:
     control = self.get_property('t_control_value')
     control = control_value.clear_up_change_flags(control)
-    if (control):
+    if control:
       control = control_value.set_temptype(control, setting)
       self.queue_command('t_control_value', control)
     else:
@@ -445,7 +462,7 @@ class AcDevice(Device):
 
   def get_temptype(self) -> TemperatureUnit:
     control = self.get_property('t_control_value')
-    if (control):
+    if control:
       return control_value.get_temptype(control)
     else:
       return self.get_property('t_temptype')
@@ -469,16 +486,16 @@ class AcDevice(Device):
       self.queue_command("t_control_value", control)
     else:
       if setting == AirFlowState.OFF:
-        self.queue_command("t_fan_speed", AirFlow.OFF)
+        self.queue_command("t_fan_power", AirFlow.OFF)
         self.queue_command("t_fan_leftright", AirFlow.OFF)
       elif setting == AirFlowState.VERTICAL_ONLY:
-        self.queue_command("t_fan_speed", AirFlow.ON)
+        self.queue_command("t_fan_power", AirFlow.ON)
         self.queue_command("t_fan_leftright", AirFlow.OFF)
       elif setting == AirFlowState.HORIZONTAL_ONLY:
-        self.queue_command("t_fan_speed", AirFlow.OFF)
+        self.queue_command("t_fan_power", AirFlow.OFF)
         self.queue_command("t_fan_leftright", AirFlow.ON)
       elif setting == AirFlowState.VERTICAL_AND_HORIZONTAL:
-        self.queue_command("t_fan_speed", AirFlow.ON)
+        self.queue_command("t_fan_power", AirFlow.ON)
         self.queue_command("t_fan_leftright", AirFlow.ON)
 
   def _convert_to_control_value(self, name: str, value) -> int:
@@ -486,6 +503,8 @@ class AcDevice(Device):
       return self.set_power(value)
     elif name == 't_fan_speed':
       return self.set_fan_speed(value)
+    elif name == 't_swing_angle':
+      return self.set_verti_sweep(value)
     elif name == 't_work_mode':
       return self.set_work_mode(value)
     elif name == 't_temp_heatcold':
@@ -546,10 +565,12 @@ class FglDevice(Device):
         'fan_speed': 'fan_speed',
         'work_mode': 'operation_mode',
         'swing_mode': 'af_vertical_swing',
-        'temp': 'adjust_temperature'
+        'temp': 'adjust_temperature',
+        'display_temperature': 'display_temperature',
+        'outdoor_temperature': 'outdoor_temperature'
     }
     self.work_modes = ['off', 'fan_only', 'heat', 'cool', 'dry', 'auto']
-    self.fan_modes = ['auto', 'quiet', 'low', 'medium', 'high']
+    self.fan_modes = ['auto', 'diffuse', 'low', 'medium', 'high']
 
 
 class FglBDevice(Device):
@@ -559,10 +580,11 @@ class FglBDevice(Device):
     self.topics = {
         'fan_speed': 'fan_speed',
         'work_mode': 'operation_mode',
-        'temp': 'adjust_temperature'
+        'temp': 'adjust_temperature',
+        'display_temperature': 'display_temperature'
     }
     self.work_modes = ['off', 'fan_only', 'heat', 'cool', 'dry', 'auto']
-    self.fan_modes = ['auto', 'quiet', 'low', 'medium', 'high']
+    self.fan_modes = ['auto', 'diffuse', 'low', 'medium', 'high']
 
 
 class HumidifierDevice(Device):

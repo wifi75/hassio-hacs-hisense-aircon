@@ -1,22 +1,13 @@
 import aiohttp
 import asyncio
-import concurrent
 from dataclasses import dataclass
 from http import HTTPStatus
 import json
 import logging
 import socket
-import sys
-from tenacity import retry, retry_if_exception_type, wait_exponential, stop_after_attempt
 import time
-import threading
 
 from .aircon import Device
-
-if sys.version_info < (3, 8):
-  TimeoutError = concurrent.futures.TimeoutError
-else:
-  TimeoutError = asyncio.exceptions.TimeoutError
 
 
 @dataclass
@@ -26,14 +17,9 @@ class _NotifyConfiguration:
   last_timestamp: int
 
 
-def _run_after_failure(retry_state):
-  config = retry_state.kwargs['config']
-  config.device.available = False
-  return 0
-
-
 class Notifier:
   _KEEP_ALIVE_INTERVAL = 10.0
+  _REQUEST_TIMEOUT = 5.0
   _TIME_TO_HANDLE_REQUESTS = 100e-3
 
   def __init__(self, port: int, local_ip: str, loop=None):
@@ -82,11 +68,11 @@ class Notifier:
       while self._running:
         queue_sizes = await asyncio.gather(*(self._perform_request(session=session, config=config)
                                              for config in self._configurations))
-        if max(queue_sizes) <= 1:
+        if max(queue_sizes, default=0) <= 1:
           logging.debug('[KeepAlive] Waiting for notification or timeout')
           try:
             await asyncio.wait_for(self._condition.wait(), timeout=self._KEEP_ALIVE_INTERVAL)
-          except TimeoutError:
+          except asyncio.TimeoutError:
             pass
         else:
           # give some time to clean up the queues
@@ -96,10 +82,6 @@ class Notifier:
     self._running = False
     await self._notify()
 
-  @retry(retry=retry_if_exception_type(ConnectionError),
-         retry_error_callback=_run_after_failure,
-         wait=wait_exponential(exp_base=1.6, max=10),
-         stop=stop_after_attempt(6))
   async def _perform_request(self, session: aiohttp.ClientSession,
                              config: _NotifyConfiguration) -> int:
     now = time.time()
@@ -112,16 +94,20 @@ class Notifier:
     url = f'http://{config.device.ip_address}/local_reg.json'
     logging.debug(f'[KeepAlive] Sending {method} {url} {json.dumps(self._json)}')
     try:
-      async with session.request(method, url, json=self._json, headers=config.headers) as resp:
+      timeout = aiohttp.ClientTimeout(total=self._REQUEST_TIMEOUT)
+      async with session.request(method, url, json=self._json, headers=config.headers,
+                                 timeout=timeout) as resp:
         if resp.status != HTTPStatus.ACCEPTED.value:
           resp_data = await resp.text()
           logging.error(f'[KeepAlive] Sending local_reg failed: {resp.status}, {resp_data}')
-          raise ConnectionError(f'Sending local_reg failed: {resp.status}, {resp_data}')
-    except (aiohttp.client_exceptions.ClientConnectorError,
-            aiohttp.client_exceptions.ClientConnectionError) as e:
-      logging.error(f'Failed to connect to {config.device.ip_address}, maybe it is offline?')
-      raise ConnectionError(
-          f'Failed to connect to {config.device.ip_address}, maybe it is offline?')
+          config.last_timestamp = now
+          config.device.available = False
+          return 0
+    except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
+      logging.warning(f'Failed to connect to {config.device.ip_address}, maybe it is offline: {ex}')
+      config.last_timestamp = now
+      config.device.available = False
+      return 0
     config.last_timestamp = now
     config.device.available = True
     return queue_size

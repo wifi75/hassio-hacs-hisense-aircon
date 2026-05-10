@@ -46,7 +46,7 @@ FGL_TO_HVAC = {
     FglOperationMode.AUTO: HVACMode.AUTO,
     FglOperationMode.COOL: HVACMode.COOL,
     FglOperationMode.DRY: HVACMode.DRY,
-    FglOperationMode.FAN: HVACMode.FAN_ONLY,
+    FglOperationMode.FAN_ONLY: HVACMode.FAN_ONLY,
     FglOperationMode.HEAT: HVACMode.HEAT,
     FglOperationMode.OFF: HVACMode.OFF,
     FglOperationMode.ON: HVACMode.AUTO,
@@ -105,9 +105,14 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
     return 86 if self.device.is_fahrenheit else 30
 
   @property
+  def target_temperature_step(self) -> float:
+    """Return target temperature step."""
+    return self.device.get_temp_precision()
+
+  @property
   def current_temperature(self) -> float | None:
     """Return current room temperature."""
-    prop = self.device.topics.get("env_temp")
+    prop = self.device.topics.get("env_temp") or self.device.topics.get("display_temperature")
     return self.device.get_property(prop) if prop else None
 
   @property

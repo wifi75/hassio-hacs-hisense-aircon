@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Ported recent community fork fixes for sleep mode, control-value work mode updates, and swing command handling.
+- Added FGLair temperature scaling, half-degree target steps, display/outdoor temperature parsing, fan-only mode, diffuse fan mode, powerful mode, outdoor low noise, and refresh/get-prop controls.
+- Added vertical swing angle support as a native Home Assistant select entity.
+- Improved local registration keepalive handling with request timeouts and offline availability updates.
+- Hardened property parsing and encrypted update logging for malformed payloads.
+
 ## 1.0.1
 
 - Added browser-friendly `GET` explanations on real Hisense/Ayla LAN endpoints.
