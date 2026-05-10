@@ -17,12 +17,15 @@ CONF_SETUP_METHOD = "setup_method"
 CONF_STATUS_INTERVAL = "status_interval"
 CONF_SW_VERSION = "sw_version"
 CONF_TEMP_TYPE = "temp_type"
+CONF_TEMP_TYPE_AUTO = "auto"
 
 DEFAULT_CALLBACK_PORT = 8123
 DEFAULT_STATUS_INTERVAL = 600
 
 SETUP_METHOD_CLOUD = "cloud"
 SETUP_METHOD_MANUAL = "manual"
+
+TEMP_TYPE_OPTIONS = [CONF_TEMP_TYPE_AUTO, "C", "F"]
 
 ACTIVE_CONTROLLER = "active_controller"
 VIEWS_REGISTERED = "views_registered"

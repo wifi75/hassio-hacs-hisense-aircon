@@ -27,13 +27,15 @@
               "device_name": "Device name filter",
               "local_ip": "Home Assistant local IP address",
               "callback_port": "Home Assistant HTTP port",
-              "status_interval": "Status refresh interval"
+              "status_interval": "Status refresh interval",
+              "temp_type": "Device temperature unit"
             },
             "data_description": {
               "device_name": "Optional exact device name from the mobile app. Leave empty to add every compatible device found in this app account.",
               "local_ip": "Optional IP address that Home Assistant should advertise to the air conditioner. Leave empty for automatic detection. Set this when Home Assistant has multiple IP addresses, Docker/macvlan networking, or VLAN routing and the device cannot reach the automatically chosen address.",
               "callback_port": "Plain HTTP port on Home Assistant that the air conditioner can reach. This is usually 8123. Change it only if Home Assistant is exposed to the device on a different local HTTP port.",
-              "status_interval": "How often, in seconds, Home Assistant queues a full property refresh for the device. Lower values update stale entities sooner but create more local traffic; higher values are quieter but slower to notice changes made outside Home Assistant."
+              "status_interval": "How often, in seconds, Home Assistant queues a full property refresh for the device. Lower values update stale entities sooner but create more local traffic; higher values are quieter but slower to notice changes made outside Home Assistant.",
+              "temp_type": "Use auto unless temperatures or valid ranges look wrong. Auto uses the selected app code; if the app does not identify a native unit, Home Assistant's configured temperature unit is used as the fallback."
             }
           }
         }
@@ -72,12 +74,14 @@
         "data": {
           "local_ip": "Home Assistant local IP address",
           "callback_port": "Home Assistant HTTP port",
-          "status_interval": "Status refresh interval"
+          "status_interval": "Status refresh interval",
+          "temp_type": "Device temperature unit"
         },
         "data_description": {
           "local_ip": "Use only when Home Assistant has multiple network interfaces or VLANs. Leave empty for automatic detection.",
           "callback_port": "The plain HTTP port that the air conditioner can reach, usually 8123.",
-          "status_interval": "How often Home Assistant queues a full property refresh, in seconds."
+          "status_interval": "How often Home Assistant queues a full property refresh, in seconds.",
+          "temp_type": "Use auto unless temperatures or valid ranges look wrong. Auto keeps the unit detected during setup; C or F overrides the stored device unit after the integration reloads."
         }
       }
     }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3
+
+- Added configurable device temperature units for cloud setup and integration options.
+- Used Home Assistant's configured temperature unit as the fallback when cloud discovery cannot determine the device unit.
+- Defaulted manual setup temperature units from Home Assistant instead of hardcoding Celsius.
+
 ## 1.1.2
 
 - Fixed the collapsed Advanced Settings section so default values do not block cloud setup validation.

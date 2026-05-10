@@ -21,6 +21,8 @@ from .const import (
     CONF_DEVICES,
     CONF_LOCAL_IP,
     CONF_STATUS_INTERVAL,
+    CONF_TEMP_TYPE,
+    CONF_TEMP_TYPE_AUTO,
     DEFAULT_CALLBACK_PORT,
     DEFAULT_STATUS_INTERVAL,
     DOMAIN,
@@ -42,7 +44,7 @@ class HisenseController:
     self.hass = hass
     self.entry = entry
     self.devices = [
-        Device.create(device_config, self._notify_device)
+        Device.create(self._device_config(device_config), self._notify_device)
         for device_config in entry.data[CONF_DEVICES]
     ]
     self.devices_by_mac = {device.mac_address: device for device in self.devices}
@@ -56,6 +58,13 @@ class HisenseController:
 
   def _option(self, key: str, default: Any | None = None) -> Any:
     return self.entry.options.get(key, self.entry.data.get(key, default))
+
+  def _device_config(self, device_config: dict[str, Any]) -> dict[str, Any]:
+    config = dict(device_config)
+    temp_type = self._option(CONF_TEMP_TYPE, CONF_TEMP_TYPE_AUTO)
+    if temp_type in ("C", "F"):
+      config[CONF_TEMP_TYPE] = temp_type
+    return config
 
   async def async_start(self) -> None:
     """Start the LAN bridge."""

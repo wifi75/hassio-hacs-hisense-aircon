@@ -8,7 +8,13 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    UnitOfTemperature,
+)
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import section
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -36,11 +42,13 @@ from .const import (
     CONF_STATUS_INTERVAL,
     CONF_SW_VERSION,
     CONF_TEMP_TYPE,
+    CONF_TEMP_TYPE_AUTO,
     DEFAULT_CALLBACK_PORT,
     DEFAULT_STATUS_INTERVAL,
     DOMAIN,
     SETUP_METHOD_CLOUD,
     SETUP_METHOD_MANUAL,
+    TEMP_TYPE_OPTIONS,
 )
 from .discovery import perform_discovery
 
@@ -52,6 +60,7 @@ _DEFAULT_ADVANCED_SETTINGS = {
     CONF_LOCAL_IP: "",
     CONF_CALLBACK_PORT: DEFAULT_CALLBACK_PORT,
     CONF_STATUS_INTERVAL: DEFAULT_STATUS_INTERVAL,
+    CONF_TEMP_TYPE: CONF_TEMP_TYPE_AUTO,
 }
 
 
@@ -107,7 +116,15 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not discovered:
           errors["base"] = "device_not_found"
         else:
-          devices = [_device_config_from_cloud(user_input[CONF_APP], device) for device in discovered]
+          temp_type = advanced_settings.get(CONF_TEMP_TYPE, CONF_TEMP_TYPE_AUTO)
+          devices = [
+              _device_config_from_cloud(
+                  user_input[CONF_APP],
+                  device,
+                  _ha_temp_type(self.hass),
+                  temp_type,
+              ) for device in discovered
+          ]
           await self.async_set_unique_id(_unique_id(devices))
           self._abort_if_unique_id_configured()
           title = ", ".join(device["name"] for device in devices)
@@ -121,6 +138,7 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                                             DEFAULT_CALLBACK_PORT),
                   CONF_STATUS_INTERVAL: advanced_settings.get(CONF_STATUS_INTERVAL,
                                                               DEFAULT_STATUS_INTERVAL),
+                  CONF_TEMP_TYPE: temp_type,
               },
           )
 
@@ -143,6 +161,12 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         vol.Optional(CONF_LOCAL_IP, default=""): str,
                         vol.Optional(CONF_CALLBACK_PORT, default=DEFAULT_CALLBACK_PORT): int,
                         vol.Optional(CONF_STATUS_INTERVAL, default=DEFAULT_STATUS_INTERVAL): int,
+                        vol.Optional(CONF_TEMP_TYPE, default=CONF_TEMP_TYPE_AUTO):
+                            SelectSelector(
+                                SelectSelectorConfig(
+                                    options=TEMP_TYPE_OPTIONS,
+                                    mode=SelectSelectorMode.DROPDOWN,
+                                )),
                     }),
                     {"collapsed": True},
                 ),
@@ -169,6 +193,7 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_LOCAL_IP: _blank_to_none(user_input.get(CONF_LOCAL_IP)),
                 CONF_CALLBACK_PORT: user_input[CONF_CALLBACK_PORT],
                 CONF_STATUS_INTERVAL: user_input[CONF_STATUS_INTERVAL],
+                CONF_TEMP_TYPE: user_input[CONF_TEMP_TYPE],
             },
         )
 
@@ -188,7 +213,7 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_LANIP_KEY_ID): int,
             vol.Required(CONF_MODEL, default="AEH-W4E1"): str,
             vol.Optional(CONF_SW_VERSION, default=""): str,
-            vol.Required(CONF_TEMP_TYPE, default="C"): vol.In(["C", "F"]),
+            vol.Required(CONF_TEMP_TYPE, default=_ha_temp_type(self.hass)): vol.In(["C", "F"]),
             vol.Optional(CONF_LOCAL_IP, default=""): str,
             vol.Required(CONF_CALLBACK_PORT, default=DEFAULT_CALLBACK_PORT): int,
             vol.Required(CONF_STATUS_INTERVAL, default=DEFAULT_STATUS_INTERVAL): int,
@@ -212,6 +237,7 @@ class HisenseOptionsFlow(config_entries.OptionsFlow):
               CONF_LOCAL_IP: _blank_to_none(user_input.get(CONF_LOCAL_IP)),
               CONF_CALLBACK_PORT: user_input[CONF_CALLBACK_PORT],
               CONF_STATUS_INTERVAL: user_input[CONF_STATUS_INTERVAL],
+              CONF_TEMP_TYPE: user_input[CONF_TEMP_TYPE],
           },
       )
 
@@ -242,6 +268,18 @@ class HisenseOptionsFlow(config_entries.OptionsFlow):
                 ),
             ):
                 int,
+            vol.Required(
+                CONF_TEMP_TYPE,
+                default=self._entry.options.get(
+                    CONF_TEMP_TYPE,
+                    self._entry.data.get(CONF_TEMP_TYPE, CONF_TEMP_TYPE_AUTO),
+                ),
+            ):
+                SelectSelector(
+                    SelectSelectorConfig(
+                        options=TEMP_TYPE_OPTIONS,
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )),
         }),
     )
 
@@ -257,14 +295,27 @@ def _normalize_mac(mac_address: str) -> str:
   return mac_address.replace(":", "").replace("-", "").lower()
 
 
-def _device_config_from_cloud(app: str, device: dict[str, Any]) -> dict[str, Any]:
+def _ha_temp_type(hass) -> str:
+  """Return the Home Assistant configured temperature unit as Hisense temp_type."""
+  return "F" if hass.config.units.temperature_unit == UnitOfTemperature.FAHRENHEIT else "C"
+
+
+def _device_config_from_cloud(
+    app: str,
+    device: dict[str, Any],
+    fallback_temp_type: str,
+    temp_type_override: str,
+) -> dict[str, Any]:
+  temp_type = (
+      temp_type_override
+      if temp_type_override in ("C", "F") else device.get("temp_type") or fallback_temp_type)
   return {
       "name": device["product_name"],
       "app": app,
       "model": device.get("oem_model") or device.get("model") or "unknown",
       "sw_version": device.get("sw_version") or "",
       "dsn": device.get("dsn"),
-      "temp_type": device.get("temp_type") or "F",
+      "temp_type": temp_type,
       "mac_address": _normalize_mac(device["mac"]),
       "ip_address": device["lan_ip"],
       "lanip_key": device["lanip_key"],
