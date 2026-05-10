@@ -1,8 +1,16 @@
-# Hisense Air Conditioner for Home Assistant
+# HiSense Air Conditioners
 
 Native Home Assistant custom integration for Hisense/Ayla LAN air conditioners.
 
 This repository is now structured for HACS. It no longer runs as a Docker container, Home Assistant add-on, MQTT bridge, or external Python service. Home Assistant hosts the local Ayla LAN endpoints directly and communicates with the device on your local network.
+
+This integration implements the Ayla Networks LAN API used by many HiSense WiFi air conditioner modules, including AEH-W4B1 and AEH-W4E1 devices, and Fujitsu FGLair devices.
+
+As discussed in the upstream project issue [deiger/AirCon#1](https://github.com/deiger/AirCon/issues/1), the AEH-W4A1 module appears to use a different protocol. That module is used by apps such as [Hi-Smart Life](https://play.google.com/store/apps/details?id=com.qd.android.livehome), [AirConnect](https://play.google.com/store/apps/details?id=com.oem.android.airconnect), [Smart Cool](https://play.google.com/store/apps/details?id=com.oem.android.livehome), [AC WIFI](https://play.google.com/store/apps/details?id=com.oem.android.ecold), and [Tornado WiFi](https://play.google.com/store/apps/details?id=com.oem.android.tornadowifi). If your module is AEH-W4A1, this integration may not work with it.
+
+These modules are installed in air conditioners and humidifiers manufactured or branded by several companies, including Hisense, Beko, Westinghouse, Winia, Tornado, York, and others.
+
+**This project is not affiliated with Hisense, Ayla Networks, Fujitsu, any of their subsidiaries, or any of their resellers.**
 
 ## What This Integration Does
 
@@ -13,6 +21,38 @@ This repository is now structured for HACS. It no longer runs as a Docker contai
 - Exposes additional writable properties as `switch`, `select`, and `number` entities.
 - Exposes read-only device properties as `sensor` and `binary_sensor` entities.
 - Does not require MQTT.
+
+## Prerequisites
+
+1. A supported air conditioner or humidifier with a HiSense AEH-W4B1/AEH-W4E1 module, or a supported Fujitsu FGLair device.
+2. The device must already be configured in its original mobile app and connected to your network.
+3. The device must be reachable from Home Assistant on the local network.
+4. Home Assistant must be reachable by the air conditioner over plain HTTP on the configured callback port, usually `8123`.
+5. Pick the app code for the mobile app you used to configure the device:
+
+   | Code       | App Name            | App link |
+   |------------|---------------------|----------|
+   | `beko-eu`    | Beko?               | |
+   | `haxxair`    | HAXXAIR WIFI REMOTE | [Google Play](https://play.google.com/store/apps/details?id=com.aylanetworks.accontrol.haxxair) |
+   | `denali-us`  | Denali Aire         | [Google Play](https://play.google.com/store/apps/details?id=com.smart.internationalus.denaliaire) |
+   | `fglair-cn`  | FGLair China        | |
+   | `fglair-eu`  | FGLair              | [Google Play](https://play.google.com/store/apps/details?id=com.fujitsu.fglair) |
+   | `field-us`   | HiSmart Air         | [Google Play](https://play.google.com/store/apps/details?id=com.aylanetworks.accontrol.hisense) |
+   | `hisense-eu` | HiSmart Life        | [Google Play](https://play.google.com/store/apps/details?id=com.hisense.hismartinternationalforandroid) |
+   | `hisense-us` | HiSmart Home        | [Google Play](https://play.google.com/store/apps/details?id=com.hisense.hismartinternationalus) |
+   | `hismart-eu` | Smart-Living        | [Google Play](https://play.google.com/store/apps/details?id=com.smart.international2) |
+   | `hismart-us` | AI-Home             | [Google Play](https://play.google.com/store/apps/details?id=com.smart.internationalus) |
+   | `huihe-us`   | SunHome             | [Google Play](https://play.google.com/store/apps/details?id=com.sunvalley.sunhome) |
+   | `mid-eu`     | WiFi AC             | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.mid.europe.hisense) |
+   | `mid-us`     | Smiling Air         | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.mid.america.hisense) |
+   | `oem-eu`     | Hi-Smart AC         | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.europe.hisense) |
+   | `oem-us`     | Hisense?            | |
+   | `tornado-us` | Tornado WiFi        | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.tornado.america.hisense) |
+   | `winia-us`   | Winia Air Conditioner HomeSmart | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.winia.america.hisense) |
+   | `wwh-us`     | Westinghouse?       | |
+   | `york-us`    | YORK Smart          | [Google Play](https://play.google.com/store/apps/details?id=com.accontrol.york.america.hisense) |
+
+After the integration has fetched the LAN key, the device can usually be blocked from the internet as long as it can still reach Home Assistant locally. If you plan to give the device a static IP address, do that while the original app can still see the device, then use the same IP in Home Assistant.
 
 ## Supported Setup Methods
 
@@ -32,8 +72,6 @@ Use this if the device is still visible in the original mobile app.
    - optional device name filter
    - Home Assistant HTTP port, usually `8123`
    - optional Home Assistant local IP if HA has multiple network interfaces or VLANs
-
-After the integration has fetched the LAN key, the device can be blocked from the internet as long as it can still reach Home Assistant locally.
 
 ### Manual LAN Key Setup
 
@@ -85,8 +123,66 @@ Common codes include:
 - `tornado-us`
 - `york-us`
 - `beko-eu`
+- `denali-us`
+- `fglair-cn`
+- `haxxair`
+- `huihe-us`
+- `winia-us`
+- `wwh-us`
 
 The full list is available in `custom_components/hisense_aircon/app_mappings.py`.
+
+## Available Properties
+
+The table below lists the main standard A/C properties available through the local protocol. FGLair devices and humidifiers expose different property sets, but Home Assistant will still create entities from whatever writable/read-only properties are known for that device class.
+
+| Property         | Read Only | Values                                 | Comment                                                                  |
+|------------------|-----------|----------------------------------------|--------------------------------------------------------------------------|
+| `f_electricity`    | x         | Integer                                |                                                                          |
+| `f_e_arkgrille`    | x         | 0, 1                                   | Alarm from cabinet grille protection                                     |
+| `f_e_incoiltemp`   | x         | 0, 1                                   | Indoor coil temperature sensor in fault                                  |
+| `f_e_incom`        | x         | 0, 1                                   | Indoor and outdoor communication fault                                   |
+| `f_e_indisplay`    | x         | 0, 1                                   | Communication fault between indoor control panel and display panel       |
+| `f_e_ineeprom`     | x         | 0, 1                                   | Error in EEPROM of indoor control panel                                  |
+| `f_e_inele`        | x         | 0, 1                                   | Communication fault between indoor control panel and indoor power panel  |
+| `f_e_infanmotor`   | x         | 0, 1                                   | Indoor fan motor abnormal                                                |
+| `f_e_inhumidity`   | x         | 0, 1                                   | Indoor humidity sensor fault                                             |
+| `f_e_inkeys`       | x         | 0, 1                                   | Communication fault between indoor control panel and keyboard plate      |
+| `f_e_inlow`        | x         | 0, 1                                   |                                                                          |
+| `f_e_intemp`       | x         | 0, 1                                   | Indoor temperature sensor fault                                          |
+| `f_e_invzero`      | x         | 0, 1                                   | Indoor voltage zero-crossing detection fault                             |
+| `f_e_outcoiltemp`  | x         | 0, 1                                   | Outdoor coil temperature sensor fault                                    |
+| `f_e_outeeprom`    | x         | 0, 1                                   | Outdoor EEPROM error                                                     |
+| `f_e_outgastemp`   | x         | 0, 1                                   | Exhaust temperature sensor fault                                         |
+| `f_e_outmachine2`  | x         | 0, 1                                   |                                                                          |
+| `f_e_outmachine`   | x         | 0, 1                                   |                                                                          |
+| `f_e_outtemp`      | x         | 0, 1                                   | Outdoor ambient temperature sensor fault                                 |
+| `f_e_outtemplow`   | x         | 0, 1                                   |                                                                          |
+| `f_e_push`         | x         | 0, 1                                   | Communication fault between WiFi control panel and indoor control panel  |
+| `f_filterclean`    | x         | 0, 1                                   | Filter requires cleaning                                                 |
+| `f_humidity`       | x         | Integer                                | Relative humidity percent                                                |
+| `f_power_display`  | x         | 0, 1                                   |                                                                          |
+| `f_temp_in`        | x         | Decimal                                | Environment temperature                                                  |
+| `f_voltage`        | x         | Integer                                |                                                                          |
+| `t_backlight`      |           | ON, OFF                                | Turn indoor unit display/backlight on or off                             |
+| `t_device_info`    |           | 0, 1                                   |                                                                          |
+| `t_display_power`  |           | 0, 1                                   |                                                                          |
+| `t_eco`            |           | OFF, ON                                | Economy mode                                                             |
+| `t_fan_leftright`  |           | OFF, ON                                | Horizontal air flow                                                      |
+| `t_fan_mute`       |           | OFF, ON                                | Quiet mode                                                               |
+| `t_fan_power`      |           | OFF, ON                                | Vertical air flow                                                        |
+| `t_fan_speed`      |           | AUTO, LOWER, LOW, MEDIUM, HIGH, HIGHER | Fan speed                                                                |
+| `t_swing_angle`    |           | SWEEP, AUTO, ANGLE1-ANGLE6             | Vertical swing angle                                                     |
+| `t_ftkt_start`     |           | Integer                                |                                                                          |
+| `t_power`          |           | OFF, ON                                | Power                                                                    |
+| `t_run_mode`       |           | OFF, ON                                | Double frequency                                                         |
+| `t_setmulti_value` |           | Integer                                |                                                                          |
+| `t_sleep`          |           | STOP, ONE, TWO, THREE, FOUR            | Sleep mode                                                               |
+| `t_temp`           |           | Integer                                | Target temperature                                                       |
+| `t_temptype`       |           | CELSIUS, FAHRENHEIT                    | Displayed temperature unit                                               |
+| `t_temp_eight`     |           | OFF, ON                                | 8°C heat / frost protection mode                                         |
+| `t_temp_heatcold`  |           | OFF, ON                                | Fast cool/heat, also known as Super or Turbo                             |
+| `t_work_mode`      |           | FAN, HEAT, COOL, DRY, AUTO             | Work mode                                                                |
 
 ## HACS Custom Repository
 

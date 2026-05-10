@@ -13,17 +13,28 @@
         "data": {
           "app": "App code",
           "username": "Username",
-          "password": "Password",
-          "device_name": "Device name filter",
-          "local_ip": "Home Assistant local IP address",
-          "callback_port": "Home Assistant HTTP port",
-          "status_interval": "Status refresh interval"
+          "password": "Password"
         },
         "data_description": {
-          "device_name": "Leave empty to add every compatible device in the account.",
-          "local_ip": "Use only when Home Assistant has multiple network interfaces or VLANs. Leave empty for automatic detection.",
-          "callback_port": "The plain HTTP port that the air conditioner can reach, usually 8123.",
-          "status_interval": "How often Home Assistant queues a full property refresh, in seconds."
+          "app": "Choose the code for the mobile app where your air conditioner is paired. See the app-code list in this repository's README under Prerequisites."
+        },
+        "section": {
+          "advanced_settings": {
+            "name": "Advanced Settings",
+            "description": "Most users should leave these values unchanged. Use this section only if you need to add one specific device from the account, if Home Assistant has multiple network interfaces or VLANs, if your Home Assistant HTTP port is not 8123, or if you want to change how often the integration asks the device for a full property refresh.",
+            "data": {
+              "device_name": "Device name filter",
+              "local_ip": "Home Assistant local IP address",
+              "callback_port": "Home Assistant HTTP port",
+              "status_interval": "Status refresh interval"
+            },
+            "data_description": {
+              "device_name": "Optional exact device name from the mobile app. Leave empty to add every compatible device found in this app account.",
+              "local_ip": "Optional IP address that Home Assistant should advertise to the air conditioner. Leave empty for automatic detection. Set this when Home Assistant has multiple IP addresses, Docker/macvlan networking, or VLAN routing and the device cannot reach the automatically chosen address.",
+              "callback_port": "Plain HTTP port on Home Assistant that the air conditioner can reach. This is usually 8123. Change it only if Home Assistant is exposed to the device on a different local HTTP port.",
+              "status_interval": "How often, in seconds, Home Assistant queues a full property refresh for the device. Lower values update stale entities sooner but create more local traffic; higher values are quieter but slower to notice changes made outside Home Assistant."
+            }
+          }
         }
       },
       "manual": {

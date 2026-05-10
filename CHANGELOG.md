@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Improved README documentation with upstream device notes, app-code prerequisites, and available properties.
+- Simplified cloud setup so only app code, username, and password are shown by default.
+- Moved optional cloud setup fields into a collapsed Advanced Settings section with clearer explanations.
+
 ## 1.1.0
 
 - Ported recent community fork fixes for sleep mode, control-value work mode updates, and swing command handling.

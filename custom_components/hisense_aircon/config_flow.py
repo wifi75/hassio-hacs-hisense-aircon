@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectSelector,
@@ -44,6 +45,8 @@ from .const import (
 from .discovery import perform_discovery
 
 _LOGGER = logging.getLogger(__name__)
+
+_ADVANCED_SETTINGS = "advanced_settings"
 
 
 class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -80,6 +83,7 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Discover devices through the Hisense/Ayla account."""
     errors: dict[str, str] = {}
     if user_input is not None:
+      advanced_settings = user_input.get(_ADVANCED_SETTINGS, {})
       try:
         session = async_get_clientsession(self.hass)
         discovered = await perform_discovery(
@@ -87,7 +91,7 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input[CONF_APP],
             user_input[CONF_USERNAME],
             user_input[CONF_PASSWORD],
-            _blank_to_none(user_input.get(CONF_DEVICE_NAME)),
+            _blank_to_none(advanced_settings.get(CONF_DEVICE_NAME)),
             False,
         )
       except Exception:
@@ -106,9 +110,11 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
               data={
                   CONF_APP: user_input[CONF_APP],
                   CONF_DEVICES: devices,
-                  CONF_LOCAL_IP: _blank_to_none(user_input.get(CONF_LOCAL_IP)),
-                  CONF_CALLBACK_PORT: user_input[CONF_CALLBACK_PORT],
-                  CONF_STATUS_INTERVAL: user_input[CONF_STATUS_INTERVAL],
+                  CONF_LOCAL_IP: _blank_to_none(advanced_settings.get(CONF_LOCAL_IP)),
+                  CONF_CALLBACK_PORT: advanced_settings.get(CONF_CALLBACK_PORT,
+                                                            DEFAULT_CALLBACK_PORT),
+                  CONF_STATUS_INTERVAL: advanced_settings.get(CONF_STATUS_INTERVAL,
+                                                              DEFAULT_STATUS_INTERVAL),
               },
           )
 
@@ -124,10 +130,16 @@ class HisenseConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD):
                 TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
-            vol.Optional(CONF_DEVICE_NAME, default=""): str,
-            vol.Optional(CONF_LOCAL_IP, default=""): str,
-            vol.Required(CONF_CALLBACK_PORT, default=DEFAULT_CALLBACK_PORT): int,
-            vol.Required(CONF_STATUS_INTERVAL, default=DEFAULT_STATUS_INTERVAL): int,
+            vol.Optional(_ADVANCED_SETTINGS, default={}):
+                section(
+                    vol.Schema({
+                        vol.Optional(CONF_DEVICE_NAME, default=""): str,
+                        vol.Optional(CONF_LOCAL_IP, default=""): str,
+                        vol.Required(CONF_CALLBACK_PORT, default=DEFAULT_CALLBACK_PORT): int,
+                        vol.Required(CONF_STATUS_INTERVAL, default=DEFAULT_STATUS_INTERVAL): int,
+                    }),
+                    {"collapsed": True},
+                ),
         }),
         errors=errors,
     )
