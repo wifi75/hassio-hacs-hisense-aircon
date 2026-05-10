@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6
+
+- Scheduled entity state writes on the Home Assistant event loop so LAN availability and property updates are applied safely from update callbacks.
+
 ## 1.1.5
 
 - Replaced raw protocol-style property names with friendly Home Assistant entity names.

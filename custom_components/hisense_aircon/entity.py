@@ -99,7 +99,7 @@ class HisenseEntity(Entity):
         ))
 
   def _handle_device_update(self, prop_name: str, value: Any) -> None:
-    self.async_write_ha_state()
+    self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
 
 
 class HisensePropertyEntity(HisenseEntity):
@@ -127,7 +127,7 @@ class HisensePropertyEntity(HisenseEntity):
 
   def _handle_device_update(self, prop_name: str, value: Any) -> None:
     if prop_name in (self.prop_name, "available"):
-      self.async_write_ha_state()
+      self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
 
 
 def property_fields(device: Device) -> list[Field[Any]]:
