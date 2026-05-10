@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5
+
+- Replaced raw protocol-style property names with friendly Home Assistant entity names.
+- Added `hisense_property` and `description` attributes to property entities for protocol context.
+- Documented the `t_`, `f_`, and `f_e_` protocol prefixes in the README.
+
 ## 1.1.4
 
 - Added an explicit cloud discovery step for selecting one or more discovered air conditioners.

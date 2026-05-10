@@ -141,6 +141,14 @@ The full list is available in `custom_components/hisense_aircon/app_mappings.py`
 
 The table below lists the main standard A/C properties available through the local protocol. FGLair devices and humidifiers expose different property sets, but Home Assistant will still create entities from whatever writable/read-only properties are known for that device class.
 
+Home Assistant entity names are cleaned up from the raw protocol names. For example, `t_fan_leftright` is shown as **Horizontal Swing**, `t_fan_mute` as **Quiet**, and `f_e_intemp` as **Indoor Temperature Sensor Fault**. The original protocol property is still available on each entity as the `hisense_property` attribute, and the More info panel includes a short `description` attribute explaining what that entity controls or reports.
+
+Protocol prefixes mean:
+
+- `t_`: writable target/control property sent to the air conditioner
+- `f_`: read-only feedback/status property reported by the air conditioner
+- `f_e_`: read-only fault/error flag reported by the air conditioner
+
 | Property         | Read Only | Values                                 | Comment                                                                  |
 |------------------|-----------|----------------------------------------|--------------------------------------------------------------------------|
 | `f_electricity`    | x         | Integer                                |                                                                          |
