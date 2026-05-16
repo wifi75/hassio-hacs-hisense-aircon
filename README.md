@@ -54,6 +54,23 @@ These modules are installed in air conditioners and humidifiers manufactured or 
 
 After the integration has fetched the LAN key, the device can usually be blocked from the internet as long as it can still reach Home Assistant locally. If you plan to give the device a static IP address, do that while the original app can still see the device, then use the same IP in Home Assistant.
 
+## Install Using HACS (Recommended)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cvladan&repository=hassio-hacs-hisense-aircon&category=integration)
+
+Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.
+
+To add it manually:
+
+1. Open **HACS**.
+2. Go to **Integrations**.
+3. Open the three-dot menu and choose **Custom repositories**.
+4. Add `https://github.com/cvladan/hassio-hacs-hisense-aircon`.
+5. Select category **Integration**.
+6. Click **Download** for **Hisense Air Conditioner**.
+
+After installing, restart Home Assistant. Then open **Settings -> Devices & services -> Add integration** and search for **Hisense Air Conditioner**.
+
 ## Supported Setup Methods
 
 ### Cloud Discovery
@@ -196,15 +213,6 @@ Protocol prefixes mean:
 | `t_temp_eight`     |           | OFF, ON                                | 8°C heat / frost protection mode                                         |
 | `t_temp_heatcold`  |           | OFF, ON                                | Fast cool/heat, also known as Super or Turbo                             |
 | `t_work_mode`      |           | FAN, HEAT, COOL, DRY, AUTO             | Work mode                                                                |
-
-## HACS Custom Repository
-
-Add this repository in HACS as:
-
-- Category: **Integration**
-- Repository URL: this repository URL
-
-Then install **Hisense Air Conditioner** and restart Home Assistant.
 
 ## Credits
 
