@@ -101,3 +101,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Local agent/tool state
+.codex/
+.claude/
