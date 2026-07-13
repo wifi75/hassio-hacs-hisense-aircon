@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.10
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Added a "Visit" link on each device's info page** pointing to this fork's GitHub repository, using Home Assistant's standard `configuration_url` device field.
+
 ## 1.1.9
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
