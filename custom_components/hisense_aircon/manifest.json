@@ -1,18 +1,29 @@
 {
   "domain": "hisense_aircon",
   "name": "Hisense Air Conditioner",
-  "codeowners": [],
+  "codeowners": [
+    "Tiziano"
+  ],
   "config_flow": true,
   "dependencies": ["http"],
-  "documentation": "https://github.com/cvladan/hassio-hacs-hisense-aircon",
+  "documentation": "https://github.com/wifi75/hassio-hacs-hisense-aircon",
   "integration_type": "hub",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/cvladan/hassio-hacs-hisense-aircon/issues",
+  "issue_tracker": "https://github.com/wifi75/hassio-hacs-hisense-aircon/issues",
+  "logo": "icon.svg",
   "requirements": [
     "dataclasses-json==0.6.7",
     "getmac==0.9.5",
     "pycryptodome==3.23.0"
   ],
-  "single_config_entry": true,
-  "version": "1.1.7"
+  "single_config_entry": false,
+  "version": "1.1.8",
+  "author": "Tiziano (Multi-device LAN improvements)",
+  "maintainers": [
+    {
+      "github": "wifi75",
+      "name": "Tiziano",
+      "link": "https://github.com/wifi75"
+    }
+  ]
 }

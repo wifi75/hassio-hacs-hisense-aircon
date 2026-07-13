@@ -16,7 +16,6 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .aircon import Device
 from .const import (
-    ACTIVE_CONTROLLER,
     CONF_CALLBACK_PORT,
     CONF_DEVICES,
     CONF_LOCAL_IP,
@@ -141,7 +140,6 @@ class HisenseController:
 
   def _register_views(self) -> None:
     domain_data = self.hass.data.setdefault(DOMAIN, {})
-    domain_data[ACTIVE_CONTROLLER] = self
     if domain_data.get(VIEWS_REGISTERED):
       return
     self.hass.http.register_view(HisenseKeyExchangeView())
@@ -156,8 +154,16 @@ class HisenseController:
 
 
 def _controller_from_request(request: web.Request) -> HisenseController:
+  """Find the controller handling the device at the request's remote IP."""
   hass = request.app["hass"]
-  return hass.data[DOMAIN][ACTIVE_CONTROLLER]
+  domain_data = hass.data.get(DOMAIN, {})
+  device_ip = request.remote
+  for controller in domain_data.values():
+    if isinstance(controller, HisenseController) and device_ip in controller.handlers.device_ips:
+      return controller
+  raise web.HTTPNotFound(
+      reason=f"No configured Hisense device matches request source {device_ip!r}."
+  )
 
 
 def _endpoint_info(url: str, protocol_methods: list[str]) -> web.Response:
