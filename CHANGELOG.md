@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.9
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed the integration logo not showing up in Home Assistant.** 1.1.8 added `custom_components/hisense_aircon/icon.svg` and a `"logo"` key in `manifest.json`, but neither is a mechanism Home Assistant actually reads — the manifest schema has no `logo` field, and integration icons are served from a dedicated `brand/` folder as PNG, not from an arbitrary file referenced in the manifest. The icon now lives at `custom_components/hisense_aircon/brand/icon.png` (plus `icon@2x.png` for hDPI), which Home Assistant 2026.3+ picks up automatically with no manifest changes required. Older Home Assistant versions simply fall back to the generic placeholder — the integration itself is unaffected.
+- Removed the non-functional `"logo"` key from `manifest.json`.
+- Fixed `codeowners` in `manifest.json` to use the `@username` GitHub-handle format Home Assistant expects (`@wifi75`) instead of a plain display name.
+
 ## 1.1.8
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

@@ -1,15 +1,15 @@
 # HiSense Air Conditioners
 
-<img src="custom_components/hisense_aircon/icon.svg" alt="Hisense Air Conditioner logo" width="96" height="96" align="right">
+<img src="custom_components/hisense_aircon/brand/icon.png" alt="Hisense Air Conditioner logo" width="96" height="96" align="right">
 
 **Fork maintained by [Tiziano](https://github.com/wifi75)** — [wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon), based on [cvladan/hassio-hacs-hisense-aircon](https://github.com/cvladan/hassio-hacs-hisense-aircon).
 
-### What changed in this fork (v1.1.8)
+### What changed in this fork (v1.1.9)
 
 - **Multiple local devices now work correctly.** The upstream code kept a single global `ACTIVE_CONTROLLER` reference, so every LAN endpoint (`/local_lan/key_exchange.json`, `/local_lan/commands.json`, etc.) always routed to whichever device config entry was set up *last* — adding a second manually configured device silently disconnected the first one. This fork routes each incoming request to the correct controller by matching the device's source IP address against the devices each controller actually owns, so any number of local devices can run at the same time.
 - **Home Assistant now allows adding more than one config entry.** The manifest previously set `single_config_entry: true`, which made Home Assistant hide/block the "Add integration" flow after the first device was configured — independent of whether the code could handle it. It's now `false`, so `Settings -> Devices & services -> Add integration -> Hisense Air Conditioner` can be repeated for every additional air conditioner (local or cloud-discovered).
-- **Custom integration logo.** Added `custom_components/hisense_aircon/icon.svg` so the integration shows a dedicated icon instead of the generic placeholder in the Home Assistant integrations list, device pages, and the HACS store.
-- **Updated manifest metadata** — author, maintainer, documentation, and issue-tracker links now point at this fork.
+- **Custom integration logo.** Added `custom_components/hisense_aircon/brand/icon.png` (and `icon@2x.png`), the folder Home Assistant 2026.3+ reads local brand images from automatically. On older Home Assistant versions the integration still works, it just falls back to the generic placeholder icon.
+- **Updated manifest metadata** — author, maintainer, documentation, and issue-tracker links now point at this fork, and `codeowners` uses the correct `@wifi75` GitHub-handle format.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full technical changelog.
 

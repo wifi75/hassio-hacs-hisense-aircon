@@ -2,7 +2,7 @@
   "domain": "hisense_aircon",
   "name": "Hisense Air Conditioner",
   "codeowners": [
-    "Tiziano"
+    "@wifi75"
   ],
   "config_flow": true,
   "dependencies": ["http"],
@@ -10,14 +10,13 @@
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/wifi75/hassio-hacs-hisense-aircon/issues",
-  "logo": "icon.svg",
   "requirements": [
     "dataclasses-json==0.6.7",
     "getmac==0.9.5",
     "pycryptodome==3.23.0"
   ],
   "single_config_entry": false,
-  "version": "1.1.8",
+  "version": "1.1.9",
   "author": "Tiziano (Multi-device LAN improvements)",
   "maintainers": [
     {
