@@ -15,6 +15,8 @@ from .config import Config, Encryption
 from .aircon import Device
 from .error import Error, KeyIdReplaced
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class QueryHandlers:
 
@@ -48,11 +50,11 @@ class QueryHandlers:
     try:
       key = data['key_exchange']
       if key['ver'] != 1 or key['proto'] != 1 or key.get('sec'):
-        logging.error(f'Invalid key exchange: {data}')
+        _LOGGER.error(f'Invalid key exchange: {data}')
         raise web.HTTPBadRequest(reason=f'Invalid key exchange: {data}')
       updated_keys = self._device_for_remote(request).update_key(key)
     except KeyIdReplaced as e:
-      logging.error(f'{e.title}\n{e.message}')
+      _LOGGER.error(f'{e.title}\n{e.message}')
       return web.Response(status=HTTPStatus.NOT_FOUND.value, reason=f'{e.title}\n{e.message}')
     return web.json_response(updated_keys)
 
@@ -83,14 +85,14 @@ class QueryHandlers:
     try:
       update = self._decrypt_and_validate(device, data)
     except Error:
-      logging.exception('Failed to parse property.')
+      _LOGGER.exception('Failed to parse property.')
       return web.Response(status=HTTPStatus.BAD_REQUEST.value, reason='Failed to parse property.')
     response = web.Response()
     if not device.is_update_valid(update['seq_no']):
       return response
     try:
       if not update['data']:
-        logging.info('Unsupported update message = {}'.format(update['seq_no']))
+        _LOGGER.info('Unsupported update message = {}'.format(update['seq_no']))
         return response
       name = update['data']['name']
       # Fix A/C typos.
@@ -99,7 +101,7 @@ class QueryHandlers:
       value = device.parse_property(name, update['data']['value'])
       device.update_property(name, value)
     except Exception as ex:
-      logging.error('Failed to handle {}. Exception = {}'.format(update, ex))
+      _LOGGER.error('Failed to handle {}. Exception = {}'.format(update, ex))
       #TODO: Should return internal error?
     return response
 
@@ -126,13 +128,13 @@ class QueryHandlers:
     try:
       device.queue_command(request.query['property'], request.query['value'])
     except Exception as ex:
-      logging.exception('Failed to queue command.')
+      _LOGGER.exception('Failed to queue command.')
       raise web.HTTPBadRequest(f'Failed to queue command:\n{ex!r}')
     return web.json_response({'queued_commands': device.commands_queue.qsize()})
 
   def _encrypt_and_sign(self, device: Device, data: dict) -> dict:
     text = json.dumps(data)
-    logging.debug('Encrypting: {}'.format(text))
+    _LOGGER.debug('Encrypting: {}'.format(text))
     text = text.encode('utf-8')
     encryption = device.get_app_encryption()
     return {
@@ -147,7 +149,7 @@ class QueryHandlers:
     message = text.decode('utf-8', errors='replace')
     if sign != data['sign']:
       raise Error(f'Invalid signature for:\n{message}!')
-    logging.info('Decrypted: %s', message)
+    _LOGGER.info('Decrypted: %s', message)
     try:
       return json.loads(message)
     except Exception as ex:

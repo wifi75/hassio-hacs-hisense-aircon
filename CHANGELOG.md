@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.12
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed per-integration debug logging.** `aircon.py`, `notifier.py`, and `query_handlers.py` called the bare `logging` module directly instead of a module-scoped logger, so all of this integration's debug/info/warning/error messages (including the `[KeepAlive]` LAN notifier logs and the encrypted command/property traffic logs) were emitted under the Python root logger. Setting `custom_components.hisense_aircon: debug` via `logger.set_level` (or in `configuration.yaml`) had no effect on them. All three files now use a proper `_LOGGER = logging.getLogger(__name__)`, so debug logging for this integration actually works.
+- **Diagnosed (not yet fixed): intermittent LAN connectivity to the AC.** While investigating the backlight/display-power switches, logs showed `Failed to connect to <device IP>, maybe it is offline: [Errno 104] Connection reset by peer` from the LAN keep-alive notifier (`notifier.py`), meaning Home Assistant's periodic "wake up and check for commands" request to the AC was actively refused by the device at least once. If this keeps happening, queued commands (including backlight/display power) may sit unsent until the AC's own next periodic poll. This looks like a device/network-level issue rather than a bug in this integration, and needs further investigation with proper debug logs now that they work.
+
 ## 1.1.11
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

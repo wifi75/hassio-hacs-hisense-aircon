@@ -9,6 +9,8 @@ import time
 
 from .aircon import Device
 
+_LOGGER = logging.getLogger(__name__)
+
 
 @dataclass
 class _NotifyConfiguration:
@@ -69,7 +71,7 @@ class Notifier:
         queue_sizes = await asyncio.gather(*(self._perform_request(session=session, config=config)
                                              for config in self._configurations))
         if max(queue_sizes, default=0) <= 1:
-          logging.debug('[KeepAlive] Waiting for notification or timeout')
+          _LOGGER.debug('[KeepAlive] Waiting for notification or timeout')
           try:
             await asyncio.wait_for(self._condition.wait(), timeout=self._KEEP_ALIVE_INTERVAL)
           except asyncio.TimeoutError:
@@ -92,19 +94,19 @@ class Notifier:
     method = 'PUT' if config.device.available else 'POST'
     self._json['local_reg']['notify'] = int(config.device.commands_queue.qsize() > 0)
     url = f'http://{config.device.ip_address}/local_reg.json'
-    logging.debug(f'[KeepAlive] Sending {method} {url} {json.dumps(self._json)}')
+    _LOGGER.debug(f'[KeepAlive] Sending {method} {url} {json.dumps(self._json)}')
     try:
       timeout = aiohttp.ClientTimeout(total=self._REQUEST_TIMEOUT)
       async with session.request(method, url, json=self._json, headers=config.headers,
                                  timeout=timeout) as resp:
         if resp.status != HTTPStatus.ACCEPTED.value:
           resp_data = await resp.text()
-          logging.error(f'[KeepAlive] Sending local_reg failed: {resp.status}, {resp_data}')
+          _LOGGER.error(f'[KeepAlive] Sending local_reg failed: {resp.status}, {resp_data}')
           config.last_timestamp = now
           config.device.available = False
           return 0
     except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
-      logging.warning(f'Failed to connect to {config.device.ip_address}, maybe it is offline: {ex}')
+      _LOGGER.warning(f'Failed to connect to {config.device.ip_address}, maybe it is offline: {ex}')
       config.last_timestamp = now
       config.device.available = False
       return 0
