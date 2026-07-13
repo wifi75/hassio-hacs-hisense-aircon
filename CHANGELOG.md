@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.18
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed fan speed not actually restoring when Super/Turbo is turned off**, confirmed with real debug logs: the software was correctly computing and sending a `t_control_value` write with the pre-Super fan speed, but the AC silently ignored the fan speed part whenever it was bundled in the *same* write as `heat_cold=OFF`, and kept reporting the Super-forced fan speed indefinitely. Turning Super off now sends `heat_cold=OFF` immediately, then sends the fan speed/mute/temperature restore as a *separate* `t_control_value` write about 3 seconds later, once the AC has had time to process leaving Super/Turbo mode.
+- Verified end-to-end with an isolated simulation: fan speed and temperature are both correctly restored after the delayed second command is applied.
+
 ## 1.1.17
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

@@ -259,6 +259,12 @@ class Device(object):
 
 class AcDevice(Device):
 
+  # How long to wait after turning Super/Turbo off before sending the fan
+  # speed/mute/temperature restore as a separate command. The AC was observed
+  # (via debug logs) to silently ignore a fan speed change sent in the same
+  # t_control_value write as heat_cold=OFF.
+  _TURBO_OFF_RESTORE_DELAY = 3.0
+
   def __init__(self, config: Dict[str, str], notifier: Callable[[None], None]):
     super().__init__(config, AcProperties(), notifier)
     self.topics = {
@@ -340,10 +346,13 @@ class AcDevice(Device):
       return
 
     # Turning Super/Turbo back off: restore the fan speed/mute/temperature
-    # settings that were active before Super forced them to AUTO/unmuted/
-    # minimum-temperature, merging them into the same single t_control_value
-    # write as heat_cold=OFF for the same race-condition reason explained
-    # above.
+    # settings that were active before Super forced them. Debug logs showed
+    # the AC accepts heat_cold=OFF immediately but silently ignores a fan
+    # speed change bundled in the *same* t_control_value write -- it kept
+    # reporting the Super-forced fan speed indefinitely even though our
+    # command correctly asked for the pre-Super value. Sending heat_cold=OFF
+    # first and the fan speed/mute/temperature restore as a separate command
+    # a few seconds later works around this.
     if name == 't_temp_heatcold' and value == 'OFF':
       fan_speed = self._pre_turbo_fan_speed
       fan_mute = self._pre_turbo_fan_mute
@@ -353,15 +362,22 @@ class AcDevice(Device):
       self._pre_turbo_temp = None
       control = self.get_property('t_control_value')
       if control and (fan_speed is not None or fan_mute is not None or temp is not None):
-        control = control_value.clear_up_change_flags(control)
-        control = control_value.set_heat_cold(control, FastColdHeat.OFF)
-        if fan_speed is not None:
-          control = control_value.set_fan_speed(control, fan_speed)
-        if fan_mute is not None:
-          control = control_value.set_fan_mute(control, fan_mute)
-        if temp is not None:
-          control = control_value.set_temp(control, temp)
-        self.queue_command('t_control_value', control)
+        super().queue_command('t_temp_heatcold', value)
+
+        def _restore_pre_turbo_settings() -> None:
+          restore_control = self.get_property('t_control_value')
+          if not restore_control:
+            return
+          restore_control = control_value.clear_up_change_flags(restore_control)
+          if fan_speed is not None:
+            restore_control = control_value.set_fan_speed(restore_control, fan_speed)
+          if fan_mute is not None:
+            restore_control = control_value.set_fan_mute(restore_control, fan_mute)
+          if temp is not None:
+            restore_control = control_value.set_temp(restore_control, temp)
+          self.queue_command('t_control_value', restore_control)
+
+        threading.Timer(self._TURBO_OFF_RESTORE_DELAY, _restore_pre_turbo_settings).start()
         return
       # No saved pre-Super settings (e.g. Super was already on before Home
       # Assistant started tracking it): just turn heat_cold off and leave
