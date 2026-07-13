@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.11
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed the display/backlight switch not working on `AcDevice` models.** Once the air conditioner reports its packed `t_control_value` register (which happens after the first status update), `queue_command()` routes every write through `AcDevice._convert_to_control_value()`. That method only knows how to pack power, mode, fan, temperature, eco, and swing settings — it has no case for `t_backlight` or `t_display_power`, so toggling the "Backlight"/"Display Power" switch silently raised `ValueError` and never sent anything to the device (this is why the physical remote could still turn the display off, but the Home Assistant toggle could not). `t_backlight` and `t_display_power` are now sent as standalone commands, the same way `t_sleep` and `t_swing_angle` already were.
+
 ## 1.1.10
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
