@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.16
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Turning Super/Turbo off now also restores the target temperature**, not just fan speed/Quiet mode. The AC's own firmware forces the target temperature to its minimum while Super is active on its own (this integration never commands that), so the previously-set temperature is now saved before Super is turned on and restored -- merged into the same single `t_control_value` write -- when it's turned back off.
+
 ## 1.1.15
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
