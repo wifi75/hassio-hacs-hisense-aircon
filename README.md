@@ -1,5 +1,18 @@
 # HiSense Air Conditioners
 
+<img src="custom_components/hisense_aircon/icon.svg" alt="Hisense Air Conditioner logo" width="96" height="96" align="right">
+
+**Fork maintained by [Tiziano](https://github.com/wifi75)** — [wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon), based on [cvladan/hassio-hacs-hisense-aircon](https://github.com/cvladan/hassio-hacs-hisense-aircon).
+
+### What changed in this fork (v1.1.8)
+
+- **Multiple local devices now work correctly.** The upstream code kept a single global `ACTIVE_CONTROLLER` reference, so every LAN endpoint (`/local_lan/key_exchange.json`, `/local_lan/commands.json`, etc.) always routed to whichever device config entry was set up *last* — adding a second manually configured device silently disconnected the first one. This fork routes each incoming request to the correct controller by matching the device's source IP address against the devices each controller actually owns, so any number of local devices can run at the same time.
+- **Home Assistant now allows adding more than one config entry.** The manifest previously set `single_config_entry: true`, which made Home Assistant hide/block the "Add integration" flow after the first device was configured — independent of whether the code could handle it. It's now `false`, so `Settings -> Devices & services -> Add integration -> Hisense Air Conditioner` can be repeated for every additional air conditioner (local or cloud-discovered).
+- **Custom integration logo.** Added `custom_components/hisense_aircon/icon.svg` so the integration shows a dedicated icon instead of the generic placeholder in the Home Assistant integrations list, device pages, and the HACS store.
+- **Updated manifest metadata** — author, maintainer, documentation, and issue-tracker links now point at this fork.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full technical changelog.
+
 > [!IMPORTANT]
 > This integration does not support ConnectLife app air conditioners. For those devices, you may want to try [oyvindwe/connectlife-ha](https://github.com/oyvindwe/connectlife-ha), though this has not been verified here.
 
@@ -59,7 +72,7 @@ After the integration has fetched the LAN key, the device can usually be blocked
 
 ## Install Using HACS (Recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=cvladan&repository=hassio-hacs-hisense-aircon&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=wifi75&repository=hassio-hacs-hisense-aircon&category=integration)
 
 Open your Home Assistant instance and open this repository inside the Home Assistant Community Store.
 
@@ -68,7 +81,7 @@ To add it manually:
 1. Open **HACS**.
 2. Go to **Integrations**.
 3. Open the three-dot menu and choose **Custom repositories**.
-4. Add `https://github.com/cvladan/hassio-hacs-hisense-aircon`.
+4. Add `https://github.com/wifi75/hassio-hacs-hisense-aircon`.
 5. Select category **Integration**.
 6. Click **Download** for **Hisense Air Conditioner**.
 

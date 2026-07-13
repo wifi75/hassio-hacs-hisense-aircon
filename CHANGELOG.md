@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.8
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed multi-device LAN support.** Previously, adding a second manually configured local device silently broke the first one: all LAN HTTP endpoints (`/local_lan/...`) resolved to a single globally-shared `ACTIVE_CONTROLLER`, so the most recently added config entry overwrote every earlier one. Requests are now routed to the correct controller by matching the requesting device's IP address against each controller's own registered devices, so any number of local devices can run side by side.
+- **Enabled multiple config entries.** `single_config_entry` was `true` in the manifest, which made Home Assistant block adding a second "Hisense Air Conditioner" integration entry entirely, regardless of the underlying code support. It is now `false`, so `Settings -> Devices & services -> Add integration` can be used repeatedly to add as many local or cloud-discovered devices as needed.
+- **Added a custom logo** (`icon.svg`) so the integration displays a distinct icon in Home Assistant's integration list, device pages, and the HACS store, instead of the generic placeholder.
+- Updated `manifest.json` with author/maintainer/documentation/issue-tracker links for this fork.
+
 ## 1.1.7
 
 - Run the LAN notifier and status polling loops as background tasks so they do not delay Home Assistant startup.
