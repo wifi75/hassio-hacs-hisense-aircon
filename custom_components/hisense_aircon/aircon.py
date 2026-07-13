@@ -274,6 +274,11 @@ class AcDevice(Device):
     self.fan_modes = ['auto', 'lower', 'low', 'medium', 'high', 'higher']
     self.verti_sweeps = ['sweep', 'auto', 'angle1', 'angle2', 'angle3', 'angle4', 'angle5',
                          'angle6']
+    # Fan speed/mute settings saved when Super/Turbo is turned on, so they can
+    # be restored when it's turned back off instead of being left at the
+    # forced AUTO/unmuted values Super requires while it's active.
+    self._pre_turbo_fan_speed: FanSpeed | None = None
+    self._pre_turbo_fan_mute: Quiet | None = None
 
   # @override to add special support for t_power.
   def update_property(self, name: str, value) -> None:
@@ -310,6 +315,10 @@ class AcDevice(Device):
     # bit(s) -- in practice this made Super/Turbo turn itself back off
     # within a couple of seconds of being switched on.
     if name == 't_temp_heatcold' and value == 'ON':
+      # Remember the fan speed/mute settings Super is about to override, so
+      # they can be restored when Super is turned back off.
+      self._pre_turbo_fan_speed = self.get_property('t_fan_speed')
+      self._pre_turbo_fan_mute = self.get_property('t_fan_mute')
       control = self.get_property('t_control_value')
       if control:
         control = control_value.clear_up_change_flags(control)
@@ -324,6 +333,29 @@ class AcDevice(Device):
       super().queue_command('t_sleep', 'STOP')
       super().queue_command('t_temp_eight', 'OFF')
       return
+
+    # Turning Super/Turbo back off: restore the fan speed/mute settings that
+    # were active before Super forced them to AUTO/unmuted, merging them into
+    # the same single t_control_value write as heat_cold=OFF for the same
+    # race-condition reason explained above.
+    if name == 't_temp_heatcold' and value == 'OFF':
+      fan_speed = self._pre_turbo_fan_speed
+      fan_mute = self._pre_turbo_fan_mute
+      self._pre_turbo_fan_speed = None
+      self._pre_turbo_fan_mute = None
+      control = self.get_property('t_control_value')
+      if control and (fan_speed is not None or fan_mute is not None):
+        control = control_value.clear_up_change_flags(control)
+        control = control_value.set_heat_cold(control, FastColdHeat.OFF)
+        if fan_speed is not None:
+          control = control_value.set_fan_speed(control, fan_speed)
+        if fan_mute is not None:
+          control = control_value.set_fan_mute(control, fan_mute)
+        self.queue_command('t_control_value', control)
+        return
+      # No saved pre-Super settings (e.g. Super was already on before Home
+      # Assistant started tracking it): just turn heat_cold off and leave
+      # fan speed/mute as they are.
 
     # Run base.
     super().queue_command(name, value)

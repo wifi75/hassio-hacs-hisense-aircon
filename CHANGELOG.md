@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.15
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Turning Super/Turbo off now restores the fan speed and Quiet mode that were active before it was turned on**, instead of permanently leaving them at the AUTO/unmuted values Super forces while active. The device remembers the fan speed/mute settings at the moment Super is switched on and re-applies them (merged into the same single `t_control_value` write as `heat_cold=OFF`, avoiding the same command race fixed in 1.1.14) the moment it's switched back off. If Super was already on before Home Assistant started tracking it (e.g. right after a restart), there's nothing to restore to, so turning it off just clears the Super bit as before.
+
 ## 1.1.14
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
