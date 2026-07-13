@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.13
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed the "Super"/Turbo switch (`t_temp_heatcold`) throwing "unknown error" when turned on.** Enabling Turbo mode automatically also sends `t_temp_eight OFF` as a side effect, but `t_temp_eight` was one of several writable properties with no representation in the packed `t_control_value` register, so once the AC had reported that register, this follow-up command raised `ValueError` and Home Assistant surfaced it as `switch/turn_on unknown error`.
+- **Audited every writable property against `control_value.py` and fixed all similarly affected properties at once**, instead of one at a time: `t_temp_eight`, `t_setmulti_value`, `t_device_info`, `t_ftkt_start`, and `t_run_mode` are now sent as standalone commands (like `t_backlight`/`t_display_power` were fixed in 1.1.11), since none of them have a corresponding pack/unpack function in `control_value.py`.
+- Refactored the standalone-property list into a single `Device._STANDALONE_PROPERTIES` class constant instead of an inline tuple, to make future audits easier.
+
 ## 1.1.12
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

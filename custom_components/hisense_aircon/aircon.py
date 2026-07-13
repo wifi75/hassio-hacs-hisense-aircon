@@ -34,6 +34,23 @@ class Device(object):
   _FGLB_DEVICES = re.compile(r'AP-WB\dE')
   _HUMI_DEVICES = re.compile(r'0001-0401-000[12]')
 
+  # Properties with no representation in the packed control_value register
+  # (AcDevice._convert_to_control_value / control_value.py have no case for
+  # them), so they must always be sent as standalone commands rather than
+  # being routed through the control_value packing mechanism.
+  _STANDALONE_PROPERTIES = frozenset((
+      't_control_value',
+      't_sleep',
+      't_swing_angle',
+      't_backlight',
+      't_display_power',
+      't_device_info',
+      't_ftkt_start',
+      't_run_mode',
+      't_setmulti_value',
+      't_temp_eight',
+  ))
+
   def __init__(self, config: Dict[str, str], properties: Properties, notifier: Callable[[None],
                                                                                         None]):
     self.name = config['name']
@@ -177,12 +194,7 @@ class Device(object):
       data_value = data_type(value)
 
     # If device has set t_control_value it is being controlled by this field.
-    # t_backlight and t_display_power are not part of the packed control_value
-    # register (AcDevice._convert_to_control_value does not handle them), so
-    # they must always be sent as standalone commands, same as t_sleep and
-    # t_swing_angle.
-    if (name not in ('t_control_value', 't_sleep', 't_swing_angle', 't_backlight',
-                      't_display_power') and self.get_property('t_control_value')):
+    if name not in self._STANDALONE_PROPERTIES and self.get_property('t_control_value'):
       self._convert_to_control_value(name, data_value)
       return
 
