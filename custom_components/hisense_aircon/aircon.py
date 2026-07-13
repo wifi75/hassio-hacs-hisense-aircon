@@ -213,6 +213,38 @@ class Device(object):
 
     self._queue_listener()
 
+  def force_standalone_command(self, name: str, value) -> None:
+    """Queue a raw property write, always bypassing control_value routing.
+
+    Unlike queue_command(), this never redirects through
+    _convert_to_control_value() even if t_control_value is currently set.
+    Used for properties that need to be sent as an independent write in a
+    specific situation, regardless of how they're normally handled.
+    """
+    if self._properties.get_read_only(name):
+      raise Error('Cannot update read-only property "{}".'.format(name))
+    data_type = self._properties.get_type(name)
+
+    if issubclass(data_type, enum.Enum):
+      data_value = value if isinstance(value, data_type) else data_type[str(value).upper()]
+      typed_value = data_value
+      data_value = data_value.value
+    elif data_type is int:
+      float_val = float(value)
+      precision = self._properties.get_precision(name)
+      scale = self._properties.get_scale(name)
+      float_val = (round(float_val / precision) * precision) / scale
+      data_value = round(float_val)
+      typed_value = data_value
+    else:
+      data_value = data_type(value)
+      typed_value = data_value
+
+    command = self._build_command(name, data_value)
+    property_updater = lambda: self.update_property(name, typed_value)
+    self.commands_queue.put_nowait(Command(10, time.time_ns(), command, property_updater))
+    self._queue_listener()
+
   def _build_command(self, name: str, data_value: int):
     base_type = self._properties.get_base_type(name)
     return {
@@ -365,17 +397,23 @@ class AcDevice(Device):
         super().queue_command('t_temp_heatcold', value)
 
         def _restore_pre_turbo_settings() -> None:
+          # temp/fan_mute restore correctly through a merged t_control_value
+          # write (confirmed via debug logs). fan_speed does not -- the AC
+          # keeps reporting the Super-forced fan speed even when it's sent
+          # this way as its own separate, delayed command. Send it as a
+          # standalone property write instead, bypassing control_value
+          # entirely, the same way already-working properties like
+          # t_backlight/t_sleep are sent.
           restore_control = self.get_property('t_control_value')
-          if not restore_control:
-            return
-          restore_control = control_value.clear_up_change_flags(restore_control)
+          if restore_control:
+            restore_control = control_value.clear_up_change_flags(restore_control)
+            if fan_mute is not None:
+              restore_control = control_value.set_fan_mute(restore_control, fan_mute)
+            if temp is not None:
+              restore_control = control_value.set_temp(restore_control, temp)
+            self.queue_command('t_control_value', restore_control)
           if fan_speed is not None:
-            restore_control = control_value.set_fan_speed(restore_control, fan_speed)
-          if fan_mute is not None:
-            restore_control = control_value.set_fan_mute(restore_control, fan_mute)
-          if temp is not None:
-            restore_control = control_value.set_temp(restore_control, temp)
-          self.queue_command('t_control_value', restore_control)
+            self.force_standalone_command('t_fan_speed', fan_speed)
 
         threading.Timer(self._TURBO_OFF_RESTORE_DELAY, _restore_pre_turbo_settings).start()
         return

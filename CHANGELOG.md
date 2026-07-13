@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.19
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed fan speed still not restoring after Super/Turbo, even as a delayed separate command.** Debug logs from v1.1.18 confirmed temperature now restores correctly with the 3-second delay, but the AC kept ignoring fan speed specifically even when sent as its own separate `t_control_value` write. Fan speed is now sent as a fully standalone `t_fan_speed` property write (via a new `Device.force_standalone_command()` helper) instead of being packed into `t_control_value`, the same way already-reliable properties like `t_backlight`/`t_sleep` are sent. Fan mute and temperature continue to restore via the merged `t_control_value` write, since debug logs already confirmed those work that way.
+
 ## 1.1.18
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
