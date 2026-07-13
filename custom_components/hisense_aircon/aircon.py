@@ -298,15 +298,35 @@ class AcDevice(Device):
         # Also turn on the AC (if it hasn't already).
         super().queue_command('t_power', 'ON')
 
-    # Run base.
-    super().queue_command(name, value)
-
-    # Handle turning on FastColdHeat
+    # Turning on FastColdHeat (Super/Turbo) also forces fan speed to auto and
+    # mutes Quiet mode. These must be merged into a single t_control_value
+    # write alongside t_temp_heatcold itself: queuing them as separate
+    # standalone control_value updates races, because set_fan_speed()/
+    # set_fan_mute()/set_fast_heat_cold() each read the *stored*
+    # t_control_value, which is only applied once a queued command is
+    # actually dequeued and sent to the device. By the time the second and
+    # third call run, neither sees the previous queued change yet, so the
+    # last command sent to the device wins and silently clears the earlier
+    # bit(s) -- in practice this made Super/Turbo turn itself back off
+    # within a couple of seconds of being switched on.
     if name == 't_temp_heatcold' and value == 'ON':
-      super().queue_command('t_fan_speed', 'AUTO')
-      super().queue_command('t_fan_mute', 'OFF')
+      control = self.get_property('t_control_value')
+      if control:
+        control = control_value.clear_up_change_flags(control)
+        control = control_value.set_heat_cold(control, FastColdHeat.ON)
+        control = control_value.set_fan_speed(control, FanSpeed.AUTO)
+        control = control_value.set_fan_mute(control, Quiet.OFF)
+        self.queue_command('t_control_value', control)
+      else:
+        super().queue_command('t_temp_heatcold', value)
+        super().queue_command('t_fan_speed', 'AUTO')
+        super().queue_command('t_fan_mute', 'OFF')
       super().queue_command('t_sleep', 'STOP')
       super().queue_command('t_temp_eight', 'OFF')
+      return
+
+    # Run base.
+    super().queue_command(name, value)
 
   def get_env_temp(self) -> int:
     return self.get_property('f_temp_in')

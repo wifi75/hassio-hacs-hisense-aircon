@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.14
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed Super/Turbo (`t_temp_heatcold`) turning itself back off within a couple of seconds of being switched on.** Diagnosed from real debug logs (thanks to the 1.1.12 logging fix): turning Super on queued three *separate* `t_control_value` writes in a row (one each from `set_fast_heat_cold`, `set_fan_speed`, `set_fan_mute`), and each one read the AC's *currently stored* control register to build its update. Because that stored value is only refreshed once a previously queued command is actually dequeued and sent to the device, the second and third writes were built from the same stale, pre-change register and silently overwrote (cleared) the heat_cold bit the first write had just set. The device's own status echo in the logs confirmed this: heat_cold was reported `ON` once, then `OFF` two commands later, well before any reasonable turbo-timeout would apply.
+- Turning Super on now computes one merged `t_control_value` (heat_cold=ON, fan_speed=AUTO, fan_mute=OFF) and sends it as a single command, eliminating the race. `t_sleep`/`t_temp_eight` continue to be sent as separate standalone commands, since they don't touch the packed register.
+- Verified with an isolated simulation seeded with a real control-value snapshot captured from the user's device logs: before the fix, 3 competing `t_control_value` commands were queued; after the fix, exactly 1, correctly decoding to heat_cold=ON, fan_speed=AUTO, fan_mute=OFF.
+
 ## 1.1.13
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
