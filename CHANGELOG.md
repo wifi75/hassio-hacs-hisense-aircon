@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.17
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- **Fixed `t_fan_mute` (Quiet mode) never syncing from the device's reported status.** `AcDevice._update_controlled_properties()` derives and applies `t_power`, `t_fan_speed`, `t_work_mode`, `t_temp_heatcold`, `t_eco`, `t_temp`, and `t_fan_power` from every `t_control_value` the AC reports, but was missing `t_fan_mute` entirely -- so the Quiet switch in Home Assistant could silently drift out of sync with the AC's real state, and any code relying on the stored `t_fan_mute` (such as the Super/Turbo save-and-restore added in 1.1.15) could read a stale value.
+- Investigating (not yet resolved): fan speed sometimes still doesn't restore correctly when Super/Turbo is turned off; needs further debug-log evidence to pin down whether this is a stale pre-Super value being saved, or the AC's own firmware not honoring the restore command immediately.
+
 ## 1.1.16
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

@@ -627,6 +627,9 @@ class AcDevice(Device):
     fan_power = control_value.get_fan_power(control)
     self.update_property('t_fan_power', fan_power)
 
+    fan_mute = control_value.get_fan_mute(control)
+    self.update_property('t_fan_mute', fan_mute)
+
     fan_horizontal = control_value.get_fan_lr(control)
     self.update_property('t_fan_leftright', fan_horizontal)
 
