@@ -141,11 +141,23 @@ class HisenseController:
 
   async def _query_status_device(self, device: Device) -> None:
     status_interval = self._option(CONF_STATUS_INTERVAL, DEFAULT_STATUS_INTERVAL)
+    # Embedded modules may miss the first post-restart status command. Retry
+    # quickly before falling back to the user-configured periodic interval.
+    for delay in (0, 10, 20):
+      if delay:
+        await asyncio.sleep(delay)
+      env_prop = device.topics.get("env_temp") or device.topics.get("display_temperature")
+      temp_prop = device.topics.get("temp")
+      if ((not env_prop or device.has_reported_property(env_prop))
+          and (not temp_prop or device.has_reported_property(temp_prop))):
+        break
+      device.queue_status()
+
     while True:
       while device.commands_queue.qsize() > 10:
         await asyncio.sleep(_WAIT_FOR_EMPTY_QUEUE)
-      device.queue_status()
       await asyncio.sleep(status_interval)
+      device.queue_status()
 
   def _register_views(self) -> None:
     domain_data = self.hass.data.setdefault(DOMAIN, {})
