@@ -2,6 +2,7 @@
 
 ## 1.2.0
 
+- Entity and climate states now remain unknown until each value is genuinely reported by the device, eliminating all misleading startup placeholders without changing protocol-control defaults.
 - Added automated tests and GitHub Actions validation plus tag-driven releases.
 - Reduced entity clutter by disabling non-primary diagnostic entities by default and assigning them to the diagnostic category.
 - Added English and Italian names for the main Hisense controls and sensors.

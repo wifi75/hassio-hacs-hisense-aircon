@@ -127,7 +127,7 @@ class HisensePropertyEntity(HisenseEntity):
   @property
   def native_value(self) -> Any:
     """Return the current property value."""
-    return property_to_native_value(self.device.get_property(self.prop_name))
+    return property_to_native_value(self.device.get_reported_property(self.prop_name))
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:

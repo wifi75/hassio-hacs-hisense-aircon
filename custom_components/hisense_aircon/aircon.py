@@ -64,6 +64,7 @@ class Device(object):
                       if config.get('temp_type') == 'C' else TemperatureUnit.FAHRENHEIT)
     self._config = Config(config['lanip_key'], config['lanip_key_id'])
     self._properties = properties
+    self._reported_properties: set[str] = set()
     self._properties_lock = threading.RLock()
     self._queue_listener = notifier
     self._schedule_delayed = schedule_delayed
@@ -129,6 +130,16 @@ class Device(object):
     with self._properties_lock:
       return getattr(self._properties, name, None)
 
+  def get_reported_property(self, name: str):
+    """Return a value only after the device has actually reported it."""
+    if name not in self._reported_properties:
+      return None
+    return self.get_property(name)
+
+  def has_reported_property(self, name: str) -> bool:
+    """Return whether a property was received from the device."""
+    return name in self._reported_properties
+
   def get_property_type(self, name: str):
     return self._properties.get_type(name)
 
@@ -152,6 +163,7 @@ class Device(object):
       notify_value = value
 
     with self._properties_lock:
+      self._reported_properties.add(name)
       old_value = getattr(self._properties, name)
       if value != old_value:
         setattr(self._properties, name, value)

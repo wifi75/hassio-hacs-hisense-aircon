@@ -33,6 +33,7 @@ async def async_get_config_entry_diagnostics(
     properties = {
         field: _native(value)
         for field, value in vars(device.get_all_properties()).items()
+        if device.has_reported_property(field)
     }
     devices.append({
         "name": device.name,

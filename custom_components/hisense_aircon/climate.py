@@ -113,17 +113,17 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   def current_temperature(self) -> float | None:
     """Return current room temperature."""
     prop = self.device.topics.get("env_temp") or self.device.topics.get("display_temperature")
-    return self.device.get_property(prop) if prop else None
+    return self.device.get_reported_property(prop) if prop else None
 
   @property
   def current_humidity(self) -> int | None:
     """Return current humidity."""
-    return self.device.get_property("f_humidity")
+    return self.device.get_reported_property("f_humidity")
 
   @property
   def target_temperature(self) -> float | None:
     """Return target temperature."""
-    return self.device.get_property(self.device.topics["temp"])
+    return self.device.get_reported_property(self.device.topics["temp"])
 
   @property
   def hvac_modes(self) -> list[HVACMode]:
@@ -140,9 +140,12 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   @property
   def hvac_mode(self) -> HVACMode | None:
     """Return current HVAC mode."""
-    if self.device.get_property("t_power") == Power.OFF:
+    power = self.device.get_reported_property("t_power")
+    if power is None:
+      return None
+    if power == Power.OFF:
       return HVACMode.OFF
-    mode = self.device.get_property(self.device.topics["work_mode"])
+    mode = self.device.get_reported_property(self.device.topics["work_mode"])
     if isinstance(mode, AcWorkMode):
       return AC_TO_HVAC.get(mode)
     if isinstance(mode, FglOperationMode):
@@ -158,7 +161,7 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   def fan_mode(self) -> str | None:
     """Return current fan mode."""
     prop = self.device.topics.get("fan_speed")
-    value = self.device.get_property(prop) if prop else None
+    value = self.device.get_reported_property(prop) if prop else None
     return value.name.lower() if value is not None else None
 
   @property
@@ -173,8 +176,8 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   @property
   def swing_mode(self) -> str | None:
     """Return current swing mode."""
-    vertical = self.device.get_property("t_fan_power")
-    horizontal = self.device.get_property("t_fan_leftright")
+    vertical = self.device.get_reported_property("t_fan_power")
+    horizontal = self.device.get_reported_property("t_fan_leftright")
     if isinstance(vertical, AirFlow) or isinstance(horizontal, AirFlow):
       vertical_on = vertical == AirFlow.ON
       horizontal_on = horizontal == AirFlow.ON
@@ -187,7 +190,7 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
       return SWING_OFF
 
     prop = self.device.topics.get("swing_mode")
-    value = self.device.get_property(prop) if prop else None
+    value = self.device.get_reported_property(prop) if prop else None
     if value == AirFlow.ON:
       return SWING_ON
     if value == AirFlow.OFF:
