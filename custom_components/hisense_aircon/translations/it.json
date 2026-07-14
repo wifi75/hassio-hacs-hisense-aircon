@@ -1,0 +1,16 @@
+{
+  "entity": {
+    "select": {
+      "sleep_mode": {
+        "name": "Modalità sonno",
+        "state": {
+          "stop": "Disattivata",
+          "one": "Comune",
+          "two": "Anziani",
+          "three": "Giovani",
+          "four": "Bambini"
+        }
+      }
+    }
+  }
+}

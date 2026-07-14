@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.20
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- Added native English and Italian labels for the Hisense sleep profiles, replacing the raw protocol values `stop`, `one`, `two`, `three`, and `four` in the Home Assistant UI with meaningful names: Off/Common/Elderly/Youngsters/Children in English and Disattivata/Comune/Anziani/Giovani/Bambini in Italian.
+
 ## 1.1.19
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
