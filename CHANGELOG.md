@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4
+
+- Keep thermostat `+`/`-` controls available during startup with a safe in-range target until restored or real device state arrives.
+- Retry full status requests after 10 and 30 seconds when the first post-restart report is missed, instead of waiting for the normal status interval.
+- Fix options submission failing with `expected str` when the optional Home Assistant local IP field is empty; the status interval value was not the cause.
+
 ## 1.2.3
 
 - Removed duplicate generic controls for power, target temperature, work mode, fan speed, temperature unit, and swing because those capabilities are already provided by the main climate entity.

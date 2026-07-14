@@ -289,7 +289,7 @@ class HisenseOptionsFlow(config_entries.OptionsFlow):
                     self._entry.data.get(CONF_LOCAL_IP) or "",
                 ),
             ):
-                str,
+                vol.Any(str, None),
             vol.Required(
                 CONF_CALLBACK_PORT,
                 default=self._entry.options.get(

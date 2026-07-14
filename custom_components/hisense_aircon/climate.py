@@ -137,7 +137,13 @@ class HisenseClimate(HisenseEntity, ClimateEntity, RestoreEntity):
   def target_temperature(self) -> float | None:
     """Return target temperature."""
     reported = self.device.get_reported_property(self.device.topics["temp"])
-    return reported if reported is not None else self._restored_target_temperature
+    if reported is not None:
+      return reported
+    if self._restored_target_temperature is not None:
+      return self._restored_target_temperature
+    # Home Assistant hides temperature controls when no target exists. Use a
+    # safe in-range startup value only until restored or real state arrives.
+    return 77 if self.device.is_fahrenheit else 25
 
   @property
   def hvac_modes(self) -> list[HVACMode]:
