@@ -16,8 +16,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install pytest dataclasses-json==0.6.7
+      - run: pip install pytest homeassistant dataclasses-json==0.6.7 getmac==0.9.5 pycryptodome==3.23.0
       - run: python -m compileall -q custom_components
+      - name: Import all integration modules
+        run: |
+          python - <<'PY'
+          import importlib
+          from pathlib import Path
+          base = Path("custom_components/hisense_aircon")
+          for path in base.glob("*.py"):
+              importlib.import_module(f"custom_components.hisense_aircon.{path.stem}")
+          PY
       - run: python -m pytest -q
       - name: Validate JSON
         run: |
