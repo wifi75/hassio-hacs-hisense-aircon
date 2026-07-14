@@ -10,6 +10,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .controller import HisenseController
 from .entity import (
+    CLIMATE_MANAGED_PROPERTIES,
+    HIDDEN_TECHNICAL_PROPERTIES,
     HisensePropertyEntity,
     enum_options,
     is_binary_enum,
@@ -28,7 +30,8 @@ async def async_setup_entry(
   entities = []
   for device in controller.devices:
     for field in property_fields(device):
-      if field.metadata["read_only"]:
+      if (field.metadata["read_only"] or field.name in CLIMATE_MANAGED_PROPERTIES
+          or field.name in HIDDEN_TECHNICAL_PROPERTIES):
         continue
       if is_enum_type(field.type) and not is_binary_enum(field.type):
         entities.append(HisensePropertySelect(controller, device, field))
