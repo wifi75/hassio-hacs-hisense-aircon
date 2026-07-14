@@ -98,6 +98,7 @@ class HisenseEntity(Entity):
 
   async def async_added_to_hass(self) -> None:
     """Subscribe to device updates."""
+    await super().async_added_to_hass()
     self.async_on_remove(
         async_dispatcher_connect(
             self.hass,

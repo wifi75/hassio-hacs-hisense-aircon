@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Restore the last recorded current and target temperatures while waiting for the first post-restart LAN update. This keeps the thermostat temperature controls visible without reintroducing fabricated protocol defaults; fresh device reports always replace restored values.
+
 ## 1.2.0
 
 - Entity and climate states now remain unknown until each value is genuinely reported by the device, eliminating all misleading startup placeholders without changing protocol-control defaults.

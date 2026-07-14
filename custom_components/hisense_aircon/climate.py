@@ -19,6 +19,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .aircon import Device
 from .const import DOMAIN
@@ -66,7 +67,7 @@ async def async_setup_entry(
       if "work_mode" in device.topics and "temp" in device.topics)
 
 
-class HisenseClimate(HisenseEntity, ClimateEntity):
+class HisenseClimate(HisenseEntity, ClimateEntity, RestoreEntity):
   """Hisense air conditioner climate entity."""
 
   _attr_name = None
@@ -76,6 +77,17 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   def __init__(self, controller: HisenseController, device: Device) -> None:
     super().__init__(controller, device)
     self._attr_unique_id = device.mac_address
+    self._restored_current_temperature: float | None = None
+    self._restored_target_temperature: float | None = None
+
+  async def async_added_to_hass(self) -> None:
+    """Restore temperatures until the device sends fresh state."""
+    await super().async_added_to_hass()
+    if (last_state := await self.async_get_last_state()) is not None:
+      current = last_state.attributes.get("current_temperature")
+      target = last_state.attributes.get("temperature")
+      self._restored_current_temperature = float(current) if current is not None else None
+      self._restored_target_temperature = float(target) if target is not None else None
 
   @property
   def supported_features(self) -> ClimateEntityFeature:
@@ -113,7 +125,8 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   def current_temperature(self) -> float | None:
     """Return current room temperature."""
     prop = self.device.topics.get("env_temp") or self.device.topics.get("display_temperature")
-    return self.device.get_reported_property(prop) if prop else None
+    reported = self.device.get_reported_property(prop) if prop else None
+    return reported if reported is not None else self._restored_current_temperature
 
   @property
   def current_humidity(self) -> int | None:
@@ -123,7 +136,8 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   @property
   def target_temperature(self) -> float | None:
     """Return target temperature."""
-    return self.device.get_reported_property(self.device.topics["temp"])
+    reported = self.device.get_reported_property(self.device.topics["temp"])
+    return reported if reported is not None else self._restored_target_temperature
 
   @property
   def hvac_modes(self) -> list[HVACMode]:
@@ -208,6 +222,7 @@ class HisenseClimate(HisenseEntity, ClimateEntity):
   async def async_set_temperature(self, **kwargs: Any) -> None:
     """Set target temperature."""
     if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
+      self._restored_target_temperature = temperature
       self.device.queue_command(self.device.topics["temp"], temperature)
     if (hvac_mode := kwargs.get("hvac_mode")) is not None:
       await self.async_set_hvac_mode(hvac_mode)
