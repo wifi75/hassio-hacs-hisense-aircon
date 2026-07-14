@@ -1,5 +1,19 @@
 {
   "title": "Hisense Air Conditioner",
+  "entity": {
+    "select": {
+      "sleep_mode": {
+        "name": "Sleep mode",
+        "state": {
+          "stop": "Off",
+          "one": "Common",
+          "two": "Elderly",
+          "three": "Youngsters",
+          "four": "Children"
+        }
+      }
+    }
+  },
   "config": {
     "step": {
       "user": {

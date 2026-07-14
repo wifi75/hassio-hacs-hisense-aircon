@@ -40,6 +40,12 @@ class HisensePropertySelect(HisensePropertyEntity, SelectEntity):
 
   _attr_should_poll = False
 
+  def __init__(self, controller, device, field) -> None:
+    """Initialize a Hisense select entity."""
+    super().__init__(controller, device, field)
+    if self.prop_name == "t_sleep":
+      self._attr_translation_key = "sleep_mode"
+
   @property
   def options(self) -> list[str]:
     """Return available options."""
