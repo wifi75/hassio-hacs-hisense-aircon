@@ -1,6 +1,22 @@
 {
   "title": "Climatizzatore Hisense",
   "entity": {
+    "switch": {
+      "t_eco": {"name": "Eco"},
+      "t_fan_mute": {"name": "Silenzioso"},
+      "t_temp_heatcold": {"name": "Super"},
+      "t_backlight": {"name": "Retroilluminazione"},
+      "t_display_power": {"name": "Alimentazione display"},
+      "t_fan_power": {"name": "Oscillazione verticale"},
+      "t_fan_leftright": {"name": "Oscillazione orizzontale"}
+    },
+    "sensor": {
+      "f_temp_in": {"name": "Temperatura interna"},
+      "f_humidity": {"name": "Umidità"}
+    },
+    "binary_sensor": {
+      "f_filterclean": {"name": "Pulizia filtro necessaria"}
+    },
     "select": {
       "sleep_mode": {
         "name": "Modalità sonno",

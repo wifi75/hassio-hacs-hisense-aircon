@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0
+
+- Added automated tests and GitHub Actions validation plus tag-driven releases.
+- Reduced entity clutter by disabling non-primary diagnostic entities by default and assigning them to the diagnostic category.
+- Added English and Italian names for the main Hisense controls and sensors.
+- Replaced the Home Assistant Super/Turbo restore thread timer with a cancellable event-loop task.
+- Added privacy-safe downloadable diagnostics.
+- Added capped reconnect backoff and safer per-device notifier payload handling.
+- Hardened unauthenticated LAN endpoints with source-IP routing, bounded JSON bodies, stricter validation, and redacted logging.
+
 ## 1.1.22
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

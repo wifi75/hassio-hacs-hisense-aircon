@@ -130,7 +130,7 @@ Enter:
 
 ## Network Notes
 
-The air conditioner must be able to reach Home Assistant by plain HTTP on the configured port. The integration registers these local endpoints:
+The air conditioner must be able to reach Home Assistant by plain HTTP on the configured port. Requests are accepted only when their source IP matches a configured Hisense device. JSON bodies are size-limited and decrypted payload contents are not written to normal logs. The integration registers these local endpoints:
 
 - `/local_lan/key_exchange.json`
 - `/local_lan/commands.json`

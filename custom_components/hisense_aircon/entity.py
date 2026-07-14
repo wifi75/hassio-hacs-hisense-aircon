@@ -8,7 +8,7 @@ from typing import Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity import Entity, EntityCategory
 
 from .aircon import Device
 from .const import DOMAIN, signal_device_update
@@ -67,6 +67,12 @@ _PROPERTY_INFO = {
     "t_work_mode": ("Work Mode", "Operating mode: fan, heat, cool, dry, or auto."),
 }
 
+_PRIMARY_READ_ONLY_PROPERTIES = {"f_temp_in", "f_humidity", "display_temperature"}
+_TRANSLATABLE_PROPERTIES = {
+    "t_eco", "t_fan_mute", "t_temp_heatcold", "t_backlight", "t_display_power",
+    "t_fan_power", "t_fan_leftright", "f_temp_in", "f_humidity", "f_filterclean",
+}
+
 
 class HisenseEntity(Entity):
   """Base entity for a Hisense device property."""
@@ -112,6 +118,11 @@ class HisensePropertyEntity(HisenseEntity):
     self.prop_name = field.name
     self._attr_name = property_friendly_name(field.name)
     self._attr_unique_id = f"{device.mac_address}_{field.name}"
+    if field.name in _TRANSLATABLE_PROPERTIES:
+      self._attr_translation_key = field.name
+    if field.metadata["read_only"] and field.name not in _PRIMARY_READ_ONLY_PROPERTIES:
+      self._attr_entity_category = EntityCategory.DIAGNOSTIC
+      self._attr_entity_registry_enabled_default = False
 
   @property
   def native_value(self) -> Any:
