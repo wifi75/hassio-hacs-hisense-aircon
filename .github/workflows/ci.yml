@@ -1,0 +1,36 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pytest homeassistant dataclasses-json==0.6.7 getmac==0.9.5 pycryptodome==3.23.0
+      - run: python -m compileall -q custom_components
+      - name: Import all integration modules
+        run: |
+          python - <<'PY'
+          import importlib
+          from pathlib import Path
+          base = Path("custom_components/hisense_aircon")
+          for path in base.glob("*.py"):
+              importlib.import_module(f"custom_components.hisense_aircon.{path.stem}")
+          PY
+      - run: python -m pytest -q
+      - name: Validate JSON
+        run: |
+          python -m json.tool custom_components/hisense_aircon/manifest.json >/dev/null
+          python -m json.tool custom_components/hisense_aircon/strings.json >/dev/null
+          python -m json.tool custom_components/hisense_aircon/translations/en.json >/dev/null
+          python -m json.tool custom_components/hisense_aircon/translations/it.json >/dev/null

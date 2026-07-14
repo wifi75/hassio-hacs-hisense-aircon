@@ -43,7 +43,7 @@ class HisenseController:
     self.hass = hass
     self.entry = entry
     self.devices = [
-        Device.create(self._device_config(device_config), self._notify_device)
+        Device.create(self._device_config(device_config), self._notify_device, self._schedule_delayed)
         for device_config in entry.data[CONF_DEVICES]
     ]
     self.devices_by_mac = {device.mac_address: device for device in self.devices}
@@ -97,6 +97,15 @@ class HisenseController:
     if hasattr(self.hass, "async_create_background_task"):
       return self.hass.async_create_background_task(coro, name)
     return self.hass.async_create_task(coro)
+
+  def _schedule_delayed(self, delay: float, callback) -> None:
+    """Schedule cancellable delayed device work on Home Assistant's loop."""
+    async def _run_delayed() -> None:
+      await asyncio.sleep(delay)
+      callback()
+
+    self._tasks.append(self._create_background_task(
+        _run_delayed(), "hisense_aircon delayed device restore"))
 
   async def async_stop(self) -> None:
     """Stop background work."""

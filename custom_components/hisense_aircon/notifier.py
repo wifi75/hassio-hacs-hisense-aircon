@@ -17,6 +17,8 @@ class _NotifyConfiguration:
   device: Device
   headers: dict
   last_timestamp: int
+  failures: int = 0
+  next_attempt: float = 0
 
 
 class Notifier:
@@ -87,29 +89,42 @@ class Notifier:
   async def _perform_request(self, session: aiohttp.ClientSession,
                              config: _NotifyConfiguration) -> int:
     now = time.time()
+    if now < config.next_attempt:
+      return 0
     queue_size = config.device.commands_queue.qsize()
     if (queue_size == 0 or
         not config.device.available) and now - config.last_timestamp < self._KEEP_ALIVE_INTERVAL:
       return 0
     method = 'PUT' if config.device.available else 'POST'
-    self._json['local_reg']['notify'] = int(config.device.commands_queue.qsize() > 0)
+    payload = {'local_reg': dict(self._json['local_reg'])}
+    payload['local_reg']['notify'] = int(config.device.commands_queue.qsize() > 0)
     url = f'http://{config.device.ip_address}/local_reg.json'
-    _LOGGER.debug(f'[KeepAlive] Sending {method} {url} {json.dumps(self._json)}')
+    _LOGGER.debug('[KeepAlive] Sending %s %s %s', method, url, json.dumps(payload))
     try:
       timeout = aiohttp.ClientTimeout(total=self._REQUEST_TIMEOUT)
-      async with session.request(method, url, json=self._json, headers=config.headers,
+      async with session.request(method, url, json=payload, headers=config.headers,
                                  timeout=timeout) as resp:
         if resp.status != HTTPStatus.ACCEPTED.value:
           resp_data = await resp.text()
           _LOGGER.error(f'[KeepAlive] Sending local_reg failed: {resp.status}, {resp_data}')
           config.last_timestamp = now
           config.device.available = False
+          self._record_failure(config, now)
           return 0
     except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
       _LOGGER.warning(f'Failed to connect to {config.device.ip_address}, maybe it is offline: {ex}')
       config.last_timestamp = now
       config.device.available = False
+      self._record_failure(config, now)
       return 0
     config.last_timestamp = now
+    config.failures = 0
+    config.next_attempt = 0
     config.device.available = True
     return queue_size
+
+  @staticmethod
+  def _record_failure(config: _NotifyConfiguration, now: float) -> None:
+    """Apply capped exponential reconnect backoff."""
+    config.failures += 1
+    config.next_attempt = now + min(60, 2 ** min(config.failures, 6))

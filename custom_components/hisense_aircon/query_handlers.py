@@ -20,6 +20,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class QueryHandlers:
 
+  _MAX_REQUEST_BODY = 64 * 1024
+
   def __init__(self, devices: [Device]):
     self._devices_map = {}
     for device in devices:
@@ -45,13 +47,12 @@ class QueryHandlers:
     AC.
     """
     updated_keys = {}
-    post_data = await request.text()
-    data = json.loads(post_data)
+    data = await self._read_json(request)
     try:
       key = data['key_exchange']
       if key['ver'] != 1 or key['proto'] != 1 or key.get('sec'):
-        _LOGGER.error(f'Invalid key exchange: {data}')
-        raise web.HTTPBadRequest(reason=f'Invalid key exchange: {data}')
+        _LOGGER.warning('Rejected invalid key exchange from %s', request.remote)
+        raise web.HTTPBadRequest(reason='Invalid key exchange payload.')
       updated_keys = self._device_for_remote(request).update_key(key)
     except KeyIdReplaced as e:
       _LOGGER.error(f'{e.title}\n{e.message}')
@@ -80,8 +81,7 @@ class QueryHandlers:
     Decrypts, validates, and pushes the value into the local properties store.
     """
     device = self._device_for_remote(request)
-    post_data = await request.text()
-    data = json.loads(post_data)
+    data = await self._read_json(request)
     try:
       update = self._decrypt_and_validate(device, data)
     except Error:
@@ -101,7 +101,7 @@ class QueryHandlers:
       value = device.parse_property(name, update['data']['value'])
       device.update_property(name, value)
     except Exception as ex:
-      _LOGGER.error('Failed to handle {}. Exception = {}'.format(update, ex))
+      _LOGGER.warning('Failed to handle property update from %s: %s', request.remote, ex)
       #TODO: Should return internal error?
     return response
 
@@ -148,12 +148,25 @@ class QueryHandlers:
     sign = base64.b64encode(Encryption.hmac_digest(encryption.sign_key, text)).decode('utf-8')
     message = text.decode('utf-8', errors='replace')
     if sign != data['sign']:
-      raise Error(f'Invalid signature for:\n{message}!')
-    _LOGGER.info('Decrypted: %s', message)
+      raise Error('Invalid device message signature.')
+    _LOGGER.debug('Decrypted valid device message (%d bytes)', len(message))
     try:
       return json.loads(message)
     except Exception as ex:
-      raise Error(f'Failed to decode message, {ex!r}:\n{message}')
+      raise Error(f'Failed to decode device message: {ex!r}')
+
+  async def _read_json(self, request: web.Request) -> dict:
+    """Read a bounded JSON object from a configured device."""
+    if request.content_length is not None and request.content_length > self._MAX_REQUEST_BODY:
+      raise web.HTTPRequestEntityTooLarge(
+          max_size=self._MAX_REQUEST_BODY, actual_size=request.content_length)
+    try:
+      data = await request.json()
+    except (json.JSONDecodeError, ValueError):
+      raise web.HTTPBadRequest(reason='Invalid JSON payload.')
+    if not isinstance(data, dict):
+      raise web.HTTPBadRequest(reason='JSON payload must be an object.')
+    return data
 
   @staticmethod
   def pad(data: bytes):

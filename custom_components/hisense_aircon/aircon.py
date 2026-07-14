@@ -52,7 +52,8 @@ class Device(object):
   ))
 
   def __init__(self, config: Dict[str, str], properties: Properties, notifier: Callable[[None],
-                                                                                        None]):
+                                                                                        None],
+               schedule_delayed: Callable[[float, Callable[[], None]], None] | None = None):
     self.name = config['name']
     self.app = config['app']
     self.model = config['model']
@@ -63,8 +64,10 @@ class Device(object):
                       if config.get('temp_type') == 'C' else TemperatureUnit.FAHRENHEIT)
     self._config = Config(config['lanip_key'], config['lanip_key_id'])
     self._properties = properties
+    self._reported_properties: set[str] = set()
     self._properties_lock = threading.RLock()
     self._queue_listener = notifier
+    self._schedule_delayed = schedule_delayed
     self._available = None
     self.topics = {}
     self.work_modes = []
@@ -83,15 +86,15 @@ class Device(object):
     self._property_change_listeners = []  # type List[Callable[[str, Any], None]]
 
   @classmethod
-  def create(cls, config: Dict[str, str], notifier: Callable[[None], None]):
+  def create(cls, config: Dict[str, str], notifier: Callable[[None], None], schedule_delayed=None):
     model = config['model']
     if cls._FGL_DEVICES.fullmatch(model):
-      return FglDevice(config, notifier)
+      return FglDevice(config, notifier, schedule_delayed)
     if cls._FGLB_DEVICES.fullmatch(model):
-      return FglBDevice(config, notifier)
+      return FglBDevice(config, notifier, schedule_delayed)
     if cls._HUMI_DEVICES.fullmatch(model):
-      return HumidifierDevice(config, notifier)
-    return AcDevice(config, notifier)
+      return HumidifierDevice(config, notifier, schedule_delayed)
+    return AcDevice(config, notifier, schedule_delayed)
 
   @property
   def is_fahrenheit(self) -> bool:
@@ -127,6 +130,16 @@ class Device(object):
     with self._properties_lock:
       return getattr(self._properties, name, None)
 
+  def get_reported_property(self, name: str):
+    """Return a value only after the device has actually reported it."""
+    if name not in self._reported_properties:
+      return None
+    return self.get_property(name)
+
+  def has_reported_property(self, name: str) -> bool:
+    """Return whether a property was received from the device."""
+    return name in self._reported_properties
+
   def get_property_type(self, name: str):
     return self._properties.get_type(name)
 
@@ -150,6 +163,7 @@ class Device(object):
       notify_value = value
 
     with self._properties_lock:
+      self._reported_properties.add(name)
       old_value = getattr(self._properties, name)
       if value != old_value:
         setattr(self._properties, name, value)
@@ -297,8 +311,8 @@ class AcDevice(Device):
   # t_control_value write as heat_cold=OFF.
   _TURBO_OFF_RESTORE_DELAY = 3.0
 
-  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None]):
-    super().__init__(config, AcProperties(), notifier)
+  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None], schedule_delayed=None):
+    super().__init__(config, AcProperties(), notifier, schedule_delayed)
     self.topics = {
         'env_temp': 'f_temp_in',
         'fan_speed': 't_fan_speed',
@@ -415,7 +429,11 @@ class AcDevice(Device):
           if fan_speed is not None:
             self.force_standalone_command('t_fan_speed', fan_speed)
 
-        threading.Timer(self._TURBO_OFF_RESTORE_DELAY, _restore_pre_turbo_settings).start()
+        if self._schedule_delayed:
+          self._schedule_delayed(self._TURBO_OFF_RESTORE_DELAY, _restore_pre_turbo_settings)
+        else:
+          # Compatibility fallback for use outside Home Assistant.
+          threading.Timer(self._TURBO_OFF_RESTORE_DELAY, _restore_pre_turbo_settings).start()
         return
       # No saved pre-Super settings (e.g. Super was already on before Home
       # Assistant started tracking it): just turn heat_cold off and leave
@@ -696,8 +714,8 @@ class AcDevice(Device):
 
 class FglDevice(Device):
 
-  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None]):
-    super().__init__(config, FglProperties(), notifier)
+  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None], schedule_delayed=None):
+    super().__init__(config, FglProperties(), notifier, schedule_delayed)
     self.topics = {
         'fan_speed': 'fan_speed',
         'work_mode': 'operation_mode',
@@ -712,8 +730,8 @@ class FglDevice(Device):
 
 class FglBDevice(Device):
 
-  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None]):
-    super().__init__(config, FglBProperties(), notifier)
+  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None], schedule_delayed=None):
+    super().__init__(config, FglBProperties(), notifier, schedule_delayed)
     self.topics = {
         'fan_speed': 'fan_speed',
         'work_mode': 'operation_mode',
@@ -726,6 +744,6 @@ class FglBDevice(Device):
 
 class HumidifierDevice(Device):
 
-  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None]):
-    super().__init__(config, HumidifierProperties(), notifier)
+  def __init__(self, config: Dict[str, str], notifier: Callable[[None], None], schedule_delayed=None):
+    super().__init__(config, HumidifierProperties(), notifier, schedule_delayed)
     self.topics = {'env_temp': 'temp', 'power': 'switch'}

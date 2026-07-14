@@ -1,6 +1,22 @@
 {
   "title": "Hisense Air Conditioner",
   "entity": {
+    "switch": {
+      "t_eco": {"name": "Eco"},
+      "t_fan_mute": {"name": "Quiet"},
+      "t_temp_heatcold": {"name": "Super"},
+      "t_backlight": {"name": "Backlight"},
+      "t_display_power": {"name": "Display power"},
+      "t_fan_power": {"name": "Vertical swing"},
+      "t_fan_leftright": {"name": "Horizontal swing"}
+    },
+    "sensor": {
+      "f_temp_in": {"name": "Indoor temperature"},
+      "f_humidity": {"name": "Humidity"}
+    },
+    "binary_sensor": {
+      "f_filterclean": {"name": "Filter cleaning required"}
+    },
     "select": {
       "sleep_mode": {
         "name": "Sleep mode",
