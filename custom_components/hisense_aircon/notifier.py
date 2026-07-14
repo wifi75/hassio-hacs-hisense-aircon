@@ -95,7 +95,9 @@ class Notifier:
     if (queue_size == 0 or
         not config.device.available) and now - config.last_timestamp < self._KEEP_ALIVE_INTERVAL:
       return 0
-    method = 'PUT' if config.device.available else 'POST'
+    # A transient PUT refusal is common on these embedded Wi-Fi modules.
+    # Retry registration with POST before declaring the device unavailable.
+    method = 'PUT' if config.device.available and config.failures == 0 else 'POST'
     payload = {'local_reg': dict(self._json['local_reg'])}
     payload['local_reg']['notify'] = int(config.device.commands_queue.qsize() > 0)
     url = f'http://{config.device.ip_address}/local_reg.json'
@@ -108,14 +110,16 @@ class Notifier:
           resp_data = await resp.text()
           _LOGGER.error(f'[KeepAlive] Sending local_reg failed: {resp.status}, {resp_data}')
           config.last_timestamp = now
-          config.device.available = False
           self._record_failure(config, now)
+          if config.failures >= 3:
+            config.device.available = False
           return 0
     except (aiohttp.ClientError, asyncio.TimeoutError) as ex:
       _LOGGER.warning(f'Failed to connect to {config.device.ip_address}, maybe it is offline: {ex}')
       config.last_timestamp = now
-      config.device.available = False
       self._record_failure(config, now)
+      if config.failures >= 3:
+        config.device.available = False
       return 0
     config.last_timestamp = now
     config.failures = 0
@@ -127,4 +131,4 @@ class Notifier:
   def _record_failure(config: _NotifyConfiguration, now: float) -> None:
     """Apply capped exponential reconnect backoff."""
     config.failures += 1
-    config.next_attempt = now + min(60, 2 ** min(config.failures, 6))
+    config.next_attempt = now + min(10, 2 ** min(config.failures, 4))
