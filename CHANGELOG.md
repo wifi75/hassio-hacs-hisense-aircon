@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.22
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- Added complete Italian translations for the configuration flow, advanced settings, options form, validation errors, and setup descriptions.
+- Renamed the English setup-flow title to "Add air conditioner" and its Italian counterpart to "Aggiungi climatizzatore". Home Assistant's integration-page button remains the core-generated "Add hub" label because this integration correctly has `integration_type: hub` and that button does not support integration-specific text.
+
 ## 1.1.21
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

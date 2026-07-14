@@ -17,7 +17,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Hisense Air Conditioner",
+        "title": "Add air conditioner",
         "data": {
           "setup_method": "Setup method"
         }
