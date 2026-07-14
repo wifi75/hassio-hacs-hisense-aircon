@@ -10,7 +10,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .controller import HisenseController
-from .entity import HisensePropertyEntity, property_fields
+from .entity import (
+    CLIMATE_MANAGED_PROPERTIES,
+    HIDDEN_TECHNICAL_PROPERTIES,
+    HisensePropertyEntity,
+    property_fields,
+)
 
 _INTERNAL_NUMBERS = {"t_control_value"}
 
@@ -25,7 +30,9 @@ async def async_setup_entry(
   entities = []
   for device in controller.devices:
     for field in property_fields(device):
-      if field.metadata["read_only"] or field.name in _INTERNAL_NUMBERS:
+      if (field.metadata["read_only"] or field.name in _INTERNAL_NUMBERS
+          or field.name in CLIMATE_MANAGED_PROPERTIES
+          or field.name in HIDDEN_TECHNICAL_PROPERTIES):
         continue
       if field.type in (int, float):
         entities.append(HisensePropertyNumber(controller, device, field))

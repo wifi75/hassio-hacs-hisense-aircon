@@ -11,7 +11,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .controller import HisenseController
-from .entity import HisensePropertyEntity, is_binary_enum, is_enum_type, property_fields
+from .entity import (
+    CLIMATE_MANAGED_PROPERTIES,
+    HIDDEN_TECHNICAL_PROPERTIES,
+    HisensePropertyEntity,
+    is_binary_enum,
+    is_enum_type,
+    property_fields,
+)
 
 
 async def async_setup_entry(
@@ -24,7 +31,8 @@ async def async_setup_entry(
   entities = []
   for device in controller.devices:
     for field in property_fields(device):
-      if field.metadata["read_only"]:
+      if (field.metadata["read_only"] or field.name in CLIMATE_MANAGED_PROPERTIES
+          or field.name in HIDDEN_TECHNICAL_PROPERTIES):
         continue
       value_type = field.type
       if value_type is bool or (is_enum_type(value_type) and is_binary_enum(value_type)):
@@ -40,7 +48,7 @@ class HisensePropertySwitch(HisensePropertyEntity, SwitchEntity):
   @property
   def is_on(self) -> bool | None:
     """Return true if the property is on."""
-    value = self.device.get_reported_property(self.prop_name)
+    value = self.device.get_property(self.prop_name)
     if isinstance(value, enum.Enum):
       return value.name == "ON"
     if value is None:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+- Removed duplicate generic controls for power, target temperature, work mode, fan speed, temperature unit, and swing because those capabilities are already provided by the main climate entity.
+- Hid internal device-info, packed-control, multi-control, and double-frequency protocol fields from the normal entity UI.
+- Writable auxiliary controls now expose their protocol state immediately instead of appearing as `unknown` with action icons while waiting for an individual property report. Read-only measurements still remain unknown until genuinely reported.
+
 ## 1.2.2
 
 - Stabilize device availability: transient keep-alive failures now trigger a POST re-registration retry and only mark the device unavailable after three consecutive failures. Reconnect backoff is capped at 10 seconds so controls no longer repeatedly turn grey after isolated Wi-Fi module refusals.

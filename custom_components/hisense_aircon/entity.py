@@ -73,6 +73,17 @@ _TRANSLATABLE_PROPERTIES = {
     "t_fan_power", "t_fan_leftright", "f_temp_in", "f_humidity", "f_filterclean",
 }
 
+# These controls are already represented by the main climate entity. Exposing
+# them again as generic switch/select/number entities duplicates the UI and can
+# produce confusing independent states.
+CLIMATE_MANAGED_PROPERTIES = {
+    "t_power", "t_temp", "t_work_mode", "t_fan_speed", "t_temptype",
+    "t_fan_power", "t_fan_leftright",
+}
+HIDDEN_TECHNICAL_PROPERTIES = {
+    "t_control_value", "t_device_info", "t_run_mode", "t_setmulti_value",
+}
+
 
 class HisenseEntity(Entity):
   """Base entity for a Hisense device property."""
@@ -128,7 +139,12 @@ class HisensePropertyEntity(HisenseEntity):
   @property
   def native_value(self) -> Any:
     """Return the current property value."""
-    return property_to_native_value(self.device.get_reported_property(self.prop_name))
+    value = (
+        self.device.get_reported_property(self.prop_name)
+        if self.field.metadata["read_only"]
+        else self.device.get_property(self.prop_name)
+    )
+    return property_to_native_value(value)
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:
