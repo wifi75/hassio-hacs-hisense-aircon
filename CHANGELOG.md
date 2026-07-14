@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2
+
+- Stabilize device availability: transient keep-alive failures now trigger a POST re-registration retry and only mark the device unavailable after three consecutive failures. Reconnect backoff is capped at 10 seconds so controls no longer repeatedly turn grey after isolated Wi-Fi module refusals.
+
 ## 1.2.1
 
 - Restore the last recorded current and target temperatures while waiting for the first post-restart LAN update. This keeps the thermostat temperature controls visible without reintroducing fabricated protocol defaults; fresh device reports always replace restored values.

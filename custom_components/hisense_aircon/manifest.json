@@ -16,7 +16,7 @@
     "pycryptodome==3.23.0"
   ],
   "single_config_entry": false,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": "Tiziano (Multi-device LAN improvements)",
   "maintainers": [
     {
