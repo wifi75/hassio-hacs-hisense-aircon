@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.21
+
+Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).
+
+- Fixed the climate card briefly showing a bogus `81 °C` indoor temperature after Home Assistant restarts. The `f_temp_in` property now remains unknown until the air conditioner reports its first real temperature instead of starting from the legacy Fahrenheit placeholder `81.0`.
+
 ## 1.1.20
 
 Fork maintained by [Tiziano](https://github.com/wifi75) ([wifi75/hassio-hacs-hisense-aircon](https://github.com/wifi75/hassio-hacs-hisense-aircon)).

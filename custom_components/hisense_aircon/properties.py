@@ -235,10 +235,10 @@ class AcProperties(Properties):
       'read_only': True
   })  # Humidity
   f_power_display: bool = field(default=0, metadata={'base_type': 'boolean', 'read_only': True})
-  f_temp_in: float = field(default=81.0, metadata={
+  f_temp_in: float = field(default=None, metadata={
       'base_type': 'decimal',
       'read_only': True
-  })  # EnvironmentTemperature (Fahrenheit)
+  })  # Environment temperature; unknown until first reported by the device.
   f_voltage: int = field(default=0, metadata={'base_type': 'integer', 'read_only': True})
   t_backlight: Dimmer = field(default=Dimmer.OFF,
                               metadata={
