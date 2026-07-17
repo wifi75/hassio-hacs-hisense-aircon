@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.6
+
+- Fixed a regression introduced in 1.2.5 where turning on the climate entity (or toggling an auxiliary switch) could fail with "Impossibile eseguire l'azione" / "1 is not a valid FanSpeed" (or similar). An unrecognized value in any single field packed into `t_control_value` now only skips that one field instead of aborting the whole update; the command is still sent to the AC correctly regardless.
+
 ## 1.2.5
 
 - Fixed a race condition where a command queued shortly after another one (e.g. turning the AC on, which internally queues power then work mode; or toggling Quiet right after changing mode/temperature/fan) could be built from a stale, not-yet-applied snapshot of the packed control register and silently revert the earlier change once sent to the AC. This was the cause of reports of the unit turning itself back on minutes after being switched off, and of the Quiet switch needing to be pressed twice to take effect.
