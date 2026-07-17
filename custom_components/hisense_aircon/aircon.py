@@ -219,11 +219,21 @@ class Device(object):
       typed_value = data_value
 
     command = self._build_command(name, data_value)
-    # There are (usually) no acks on commands, so also queue an update to the
-    # property, to be run once the command is sent.
-    property_updater = lambda: self.update_property(name, typed_value)
+    # There are (usually) no acks on commands. Apply the property update
+    # immediately (optimistically) rather than waiting for the AC to actually
+    # poll and be sent the command: t_control_value packs many unrelated
+    # properties into one register, and every set_*()/queue_command() that
+    # merges into it starts from get_property('t_control_value'). If that read
+    # only reflected state as of the last *sent* command, a second command
+    # queued shortly after a first one (e.g. turning the AC on, which queues
+    # t_power then t_work_mode; or toggling Quiet right after changing mode/
+    # temperature/fan) would build its merge from a stale snapshot missing the
+    # first command's change, and silently revert it once sent -- matching
+    # reports of Off self-reverting minutes later and Quiet needing a second
+    # press. Applying eagerly here closes that window.
+    self.update_property(name, typed_value)
     # Add as a high priority command.
-    self.commands_queue.put_nowait(Command(10, time.time_ns(), command, property_updater))
+    self.commands_queue.put_nowait(Command(10, time.time_ns(), command, None))
 
     self._queue_listener()
 
@@ -255,8 +265,11 @@ class Device(object):
       typed_value = data_value
 
     command = self._build_command(name, data_value)
-    property_updater = lambda: self.update_property(name, typed_value)
-    self.commands_queue.put_nowait(Command(10, time.time_ns(), command, property_updater))
+    # See the matching comment in queue_command(): apply optimistically now
+    # so any immediately-following command that merges into t_control_value
+    # sees this change instead of a stale pre-command snapshot.
+    self.update_property(name, typed_value)
+    self.commands_queue.put_nowait(Command(10, time.time_ns(), command, None))
     self._queue_listener()
 
   def _build_command(self, name: str, data_value: int):
@@ -704,9 +717,6 @@ class AcDevice(Device):
 
     fan_horizontal = control_value.get_fan_lr(control)
     self.update_property('t_fan_leftright', fan_horizontal)
-
-    fan_mute = control_value.get_fan_mute(control)
-    self.update_property('t_fan_mute', fan_mute)
 
     temptype = control_value.get_temptype(control)
     self.update_property('t_temptype', temptype)
