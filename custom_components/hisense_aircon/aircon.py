@@ -690,36 +690,37 @@ class AcDevice(Device):
       _LOGGER.error('Cannot convert to control value property {}'.format(name))
       raise ValueError()
 
+  # Field decoders for every property packed into t_control_value.
+  _CONTROL_VALUE_FIELDS = (
+      ('t_power', control_value.get_power),
+      ('t_fan_speed', control_value.get_fan_speed),
+      ('t_work_mode', control_value.get_work_mode),
+      ('t_temp_heatcold', control_value.get_heat_cold),
+      ('t_eco', control_value.get_eco),
+      ('t_temp', control_value.get_temp),
+      ('t_fan_power', control_value.get_fan_power),
+      ('t_fan_mute', control_value.get_fan_mute),
+      ('t_fan_leftright', control_value.get_fan_lr),
+      ('t_temptype', control_value.get_temptype),
+  )
+
   def _update_controlled_properties(self, control: int):
-    power = control_value.get_power(control)
-    self.update_property('t_power', power)
-
-    fan_speed = control_value.get_fan_speed(control)
-    self.update_property('t_fan_speed', fan_speed)
-
-    work_mode = control_value.get_work_mode(control)
-    self.update_property('t_work_mode', work_mode)
-
-    temp_heatcold = control_value.get_heat_cold(control)
-    self.update_property('t_temp_heatcold', temp_heatcold)
-
-    eco = control_value.get_eco(control)
-    self.update_property('t_eco', eco)
-
-    temp = control_value.get_temp(control)
-    self.update_property('t_temp', temp)
-
-    fan_power = control_value.get_fan_power(control)
-    self.update_property('t_fan_power', fan_power)
-
-    fan_mute = control_value.get_fan_mute(control)
-    self.update_property('t_fan_mute', fan_mute)
-
-    fan_horizontal = control_value.get_fan_lr(control)
-    self.update_property('t_fan_leftright', fan_horizontal)
-
-    temptype = control_value.get_temptype(control)
-    self.update_property('t_temptype', temptype)
+    # Decode each packed field independently and tolerate one being
+    # unrecognized (e.g. a raw code our enum doesn't map, or a transient
+    # partially-built value from an optimistic local merge): letting a single
+    # bad field raise here would abort the whole update, and -- since this
+    # can now run synchronously from a climate/switch/etc. service call
+    # (queue_command() applies it eagerly to avoid a stale-snapshot race) --
+    # would surface as a failed Home Assistant action even though the actual
+    # command was already queued and sent correctly.
+    for name, decoder in self._CONTROL_VALUE_FIELDS:
+      try:
+        value = decoder(control)
+      except ValueError:
+        _LOGGER.warning(
+            'Ignoring unrecognized %s value packed in t_control_value=%s', name, control)
+        continue
+      self.update_property(name, value)
 
 
 class FglDevice(Device):
