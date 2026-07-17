@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.5
+
+- Fixed a race condition where a command queued shortly after another one (e.g. turning the AC on, which internally queues power then work mode; or toggling Quiet right after changing mode/temperature/fan) could be built from a stale, not-yet-applied snapshot of the packed control register and silently revert the earlier change once sent to the AC. This was the cause of reports of the unit turning itself back on minutes after being switched off, and of the Quiet switch needing to be pressed twice to take effect.
+- Removed a harmless leftover duplicate `t_fan_mute` decode in the control-register parsing.
+
 ## 1.2.4
 
 - Keep thermostat `+`/`-` controls available during startup with a safe in-range target until restored or real device state arrives.
